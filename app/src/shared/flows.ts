@@ -1,3 +1,4 @@
+import type { IconName } from "./Icon"
 import type { VideoId } from "./types"
 
 export type StepKind = "video" | "detect" | "especialidad" | "horario" | "cita" | "valor" | "resultado"
@@ -16,7 +17,7 @@ export interface Step {
   variant?: "asignada" | "cancelada"
 }
 
-export interface FlowPath { id: "asignacion" | "cancelacion" | "facturacion"; name: string; icon: string; color: string; steps: Step[] }
+export interface FlowPath { id: "asignacion" | "cancelacion" | "facturacion"; name: string; icon: IconName; color: string; steps: Step[] }
 
 const documento: Step = { kind: "video", label: "Documento", short: "Doc.", video: "documento", hint: "Pida y verifique el documento de identidad.", action: "Documento recibido" }
 const ordenMedica: Step = { kind: "video", label: "Orden médica", short: "Orden", video: "orden_medica", hint: "Pida y verifique la orden médica.", action: "Orden verificada" }
@@ -30,7 +31,7 @@ export const INTRO: Step[] = [
 
 export const PATHS: FlowPath[] = [
   {
-    id: "asignacion", name: "Asignación de cita", icon: "📋", color: "#145da0",
+    id: "asignacion", name: "Asignación de cita", icon: "event_available", color: "#145da0",
     steps: [
       documento,
       { kind: "especialidad", label: "Especialidad", short: "Espec.", video: "especialidad", hint: "Elija las especialidades y servicios que se mostrarán al señante." },
@@ -40,7 +41,7 @@ export const PATHS: FlowPath[] = [
     ],
   },
   {
-    id: "cancelacion", name: "Cancelación de cita", icon: "❌", color: "#c53d3d",
+    id: "cancelacion", name: "Cancelación de cita", icon: "event_busy", color: "#c53d3d",
     steps: [
       documento,
       { kind: "cita", label: "Cita a cancelar", short: "Cita", hint: "Envíe al señante sus citas registradas para que elija cuál cancelar." },
@@ -49,7 +50,7 @@ export const PATHS: FlowPath[] = [
     ],
   },
   {
-    id: "facturacion", name: "Facturación de cita", icon: "💲", color: "#2d7a3a",
+    id: "facturacion", name: "Facturación de cita", icon: "payments", color: "#2d7a3a",
     steps: [
       documento,
       ordenMedica,

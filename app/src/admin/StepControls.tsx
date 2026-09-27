@@ -3,6 +3,7 @@ import { MOCK_CITAS, formatCOP, formatDate, formatTime } from "../shared/catalog
 import { PATHS } from "../shared/flows"
 import { citaOptions, currentStep, optionCount, stepsOf, type Session, type SessionActions } from "./session"
 import { AmountInput, SlotPicker, SpecialtyPicker } from "./pickers"
+import Icon from "../shared/Icon"
 import { ConfidenceBar, Msg } from "./widgets"
 
 /** Controles del funcionario para el paso actual del trámite. */
@@ -13,7 +14,7 @@ export default function StepControls({ session: s, actions: a }: { session: Sess
 
   const nextButton = (
     <button className="btn primary" style={{ background: color }} onClick={a.advance}>
-      {step.action ?? "Continuar"} →
+      {step.action ?? "Continuar"} <Icon name="arrow_forward" />
     </button>
   )
 
@@ -45,7 +46,7 @@ export default function StepControls({ session: s, actions: a }: { session: Sess
                 <ol className="picker-chosen">
                   {MOCK_CITAS.map((c, i) => <li key={i}><b>{i + 1}</b> {c.specialty} · {formatDate(c.date)} · {formatTime(c.time)} · {c.doctor}</li>)}
                 </ol>
-                <button className="btn primary" onClick={() => a.sendCitas(true)}>Enviar citas a la tablet →</button>
+                <button className="btn primary" onClick={() => a.sendCitas(true)}>Enviar citas a la tablet <Icon name="arrow_forward" /></button>
               </div>
             )}
         </>
@@ -92,14 +93,14 @@ function DetectControls({ s, a, tag }: { s: Session; a: SessionActions; tag: str
     <>
       <Msg tag={tag}>Cámara activa en la tablet. El señante hace la seña de su solicitud.</Msg>
       <div className="demo-box">
-        <div className="demo-title">🎬 Guion de la demo</div>
+        <div className="demo-title"><Icon name="movie" /> Guion de la demo</div>
         <label className="field">
           Resultado a simular
           <select value={scripted} onChange={(e) => setScripted(Number(e.target.value))}>
-            {PATHS.map((p, i) => <option key={p.id} value={i}>{p.icon} {p.name}</option>)}
+            {PATHS.map((p, i) => <option key={p.id} value={i}>{p.name}</option>)}
           </select>
         </label>
-        <button className="btn primary" onClick={() => a.simulateDetection(scripted, false)}>▶ Simular reconocimiento</button>
+        <button className="btn primary" onClick={() => a.simulateDetection(scripted, false)}><Icon name="play_arrow" fill /> Simular reconocimiento</button>
         <button className="btn ghost sm" onClick={() => a.simulateDetection(scripted, true)}>Simular confianza baja</button>
       </div>
     </>
@@ -116,21 +117,21 @@ function DetectControls({ s, a, tag }: { s: Session; a: SessionActions; tag: str
   return (
     <>
       <div className="detected" style={{ borderColor: path.color }}>
-        <span>{path.icon}</span>
+        <Icon name={path.icon} />
         <div><strong>{path.name}</strong><em>Seña LSC interpretada</em></div>
       </div>
       <ConfidenceBar value={confidence} animating={false} label="Precisión de interpretación LSC" />
       {low && <Msg tag="VALIDACIÓN REQUERIDA" tone="warn">La intención no se reconoció con suficiente confianza. Repita la seña o confirme el trámite manualmente.</Msg>}
-      <button className="btn warn-ghost" onClick={a.retryDetection}>↺ Volver a captar seña</button>
+      <button className="btn warn-ghost" onClick={a.retryDetection}><Icon name="restart_alt" /> Volver a captar seña</button>
       <p className="label">O confirme el trámite:</p>
       <div className="intent-list">
         {PATHS.map((p, i) => (
-          <button key={p.id} className={`intent ${i === intent ? "active" : ""}`} style={{ "--c": p.color } as React.CSSProperties} onClick={() => a.chooseIntent(i)}>
-            {p.icon} {p.name} {i === intent && <b>✓</b>}
+          <button key={p.id} className={`intent ${i === intent ? "active" : ""}`} style={{ "--c": p.color } as React.CSSProperties} aria-pressed={i === intent} onClick={() => a.chooseIntent(i)}>
+            <Icon name={p.icon} /> {p.name} {i === intent && <b><Icon name="check" label="Detectado" /></b>}
           </button>
         ))}
       </div>
-      <button className="btn primary" style={{ background: path.color }} onClick={a.confirmIntent}>Confirmar: {path.name} →</button>
+      <button className="btn primary" style={{ background: path.color }} onClick={a.confirmIntent}>Confirmar: {path.name} <Icon name="arrow_forward" /></button>
     </>
   )
 }
@@ -151,23 +152,23 @@ function PickControls({ s, a, labels, onEdit }: { s: Session; a: SessionActions;
           </div>
         </div>
       )}
-      {!analyzing && selected === null && <p className="waiting">⏳ Esperando selección (toque en la tablet o seña del número)…</p>}
+      {!analyzing && selected === null && <p className="waiting"><Icon name="hourglass_top" /> Esperando selección (toque en la tablet o seña del número)…</p>}
 
       <div className="demo-box">
-        <div className="demo-title">🎬 Simular seña de número</div>
+        <div className="demo-title"><Icon name="movie" /> Simular seña de número</div>
         <div className="num-row">
           {Array.from({ length: count }, (_, i) => (
-            <button key={i} className="num" disabled={analyzing} onClick={() => a.simulateNumberSign(i)}>{i + 1}</button>
+            <button key={i} className="num" disabled={analyzing} onClick={() => a.simulateNumberSign(i)} aria-label={`Simular seña del número ${i + 1}`}>{i + 1}</button>
           ))}
         </div>
       </div>
 
       <button className="btn primary" disabled={selected === null || analyzing} onClick={a.confirmPick}>
-        {selected === null ? "Confirmar opción" : `Confirmar opción ${selected + 1}`} →
+        {selected === null ? "Confirmar opción" : `Confirmar opción ${selected + 1}`} <Icon name="arrow_forward" />
       </button>
       <div className="row">
-        {selected !== null && <button className="btn ghost sm" onClick={a.resetPick}>↺ Recaptar</button>}
-        <button className="btn ghost sm" onClick={onEdit}>✎ Editar opciones</button>
+        {selected !== null && <button className="btn ghost sm" onClick={a.resetPick}><Icon name="restart_alt" /> Recaptar</button>}
+        <button className="btn ghost sm" onClick={onEdit}><Icon name="edit" /> Editar opciones</button>
       </div>
     </>
   )
