@@ -134,8 +134,8 @@ function ConnectionAlert({ online, tablet, paused, pairing }: { online: boolean;
   if (tablet) return null
   const title = paused ? "Atención en pausa: tablet desconectada" : "Tablet desconectada"
   const text = !online
-    ? SYNC_MODE === "peer"
-      ? "No hay conexión con el servicio de emparejamiento. Revise la conexión a internet del computador."
+    ? SYNC_MODE === "relay"
+      ? "No hay conexión con los servidores de enlace. Revise la conexión a internet del computador."
       : "No hay conexión con el servidor local. Verifique que `npm run dev` siga en ejecución."
     : paused
       ? "No se puede avanzar hasta que la tablet se reconecte. La atención continuará en el mismo paso."
@@ -192,7 +192,7 @@ function TabletPairing({ code, onNewCode }: { code: string; onNewCode: () => voi
     // Si el modo se forzó con ?sync=, la tablet debe usar el mismo.
     const forced = new URLSearchParams(location.search).has("sync") ? `&sync=${SYNC_MODE}` : ""
     const tabletUrl = (origin: string) => `${origin}${location.pathname}?tablet&s=${code}${forced}`
-    if (SYNC_MODE === "peer") { setUrls([tabletUrl(location.origin)]); return }
+    if (SYNC_MODE === "relay") { setUrls([tabletUrl(location.origin)]); return }
     fetch("api/host").then((r) => r.json())
       .then(({ ips, port }: { ips: string[]; port: number }) => setUrls(ips.map((ip) => tabletUrl(`${location.protocol}//${ip}:${port}`))))
       .catch(() => setUrls([tabletUrl(location.origin)]))

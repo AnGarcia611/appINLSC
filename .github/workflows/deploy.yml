@@ -1,5 +1,5 @@
 # Publica la app en GitHub Pages en cada push a main.
-# En Pages no hay servidor propio: la sincronización usa WebRTC (PeerJS), por eso VITE_SYNC=peer.
+# En Pages no hay servidor propio: la sincronización usa el relé MQTT (src/shared/relay.ts), por eso VITE_SYNC=relay.
 name: Desplegar en GitHub Pages
 
 on:
@@ -30,9 +30,11 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci
+      # Verifica que la tablet puede conectarse por el relé antes de publicar.
+      - run: npm run test:sync
       - run: npm run build
         env:
-          VITE_SYNC: peer
+          VITE_SYNC: relay
           BASE_PATH: /${{ github.event.repository.name }}/
       - uses: actions/upload-pages-artifact@v3
         with:

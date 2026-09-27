@@ -20,11 +20,13 @@ Hay dos modos de transporte (`src/shared/sync.ts`):
 | Modo | Cuándo | Cómo | Internet |
 |---|---|---|---|
 | `local` | `npm run dev` / `npm start` en el PC | SSE contra el servidor de Vite (salas por código) | No necesita |
-| `peer` | GitHub Pages (build con `VITE_SYNC=peer`) | WebRTC directo PC ↔ tablet con [PeerJS](https://peerjs.com) | Solo para el emparejamiento |
+| `relay` | GitHub Pages (build con `VITE_SYNC=relay`) | Mensajes cifrados por 3 servidores MQTT públicos a la vez (`src/shared/relay.ts`) | Sí |
 
-Se puede forzar el modo con `?sync=local` o `?sync=peer` en la URL (en ambas pantallas; el QR lo incluye).
+Se puede forzar el modo con `?sync=local` o `?sync=relay` en la URL (en ambas pantallas; el QR lo incluye). `?sync=peer` se acepta como sinónimo de `relay`.
 
-> En modo `peer` la conexión es directa entre los dispositivos. En la misma WiFi funciona siempre; entre redes distintas (p. ej. PC en la red de la universidad y tablet con datos móviles) puede fallar en redes muy restrictivas, porque no se usa servidor TURN.
+> En modo `relay` el PC y la tablet se conectan a **todos** los servidores de la lista (`RELAY_BROKERS`) y publican en todos: basta con que uno funcione. El tema es un hash del código de sesión y el contenido va cifrado (AES-GCM con clave derivada del código). Funciona entre redes distintas (WiFi del PC, datos móviles en la tablet) porque no depende de WebRTC.
+>
+> Antes se usaba WebRTC con el servidor público de PeerJS, pero ese servidor limita las conexiones (HTTP 429) y la tablet no podía conectarse. `npm run test:sync` comprueba de extremo a extremo que el relé funciona (también simulando un servidor caído) y se ejecuta en el workflow antes de cada despliegue.
 
 ## Despliegue en GitHub Pages
 
@@ -40,7 +42,7 @@ Los videos se publican desde `app/public/videos` (se versionan en git; los origi
 Para probar en el PC exactamente lo que se publicará:
 
 ```bash
-INLSC_HTTP=1 PORT=5175 BASE_PATH=/appINLSC/ VITE_SYNC=peer npm start   # abrir http://localhost:5175/appINLSC/
+INLSC_HTTP=1 PORT=5175 BASE_PATH=/appINLSC/ VITE_SYNC=relay npm start   # abrir http://localhost:5175/appINLSC/
 ```
 
 > ⚠️ Con GitHub gratuito, Pages exige que el repositorio sea **público**: los videos de los intérpretes y el nombre de la IPS (`src/shared/config.ts`) quedarán visibles en internet. Confirme que tiene el consentimiento de los intérpretes y autorización de la IPS antes de publicar.
