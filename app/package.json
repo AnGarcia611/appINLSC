@@ -8,11 +8,12 @@
     "dev": "vite",
     "build": "tsc -p . && vite build",
     "start": "vite build && vite preview",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "test:sync": "node scripts/test-relay.ts"
   },
   "dependencies": {
     "@material-symbols/svg-400": "^0.47.5",
-    "peerjs": "^1.5.5",
+    "mqtt": "^5.16.0",
     "qrcode": "^1.5.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

@@ -34,7 +34,7 @@
         "INLSC_HTTP=1",
         "PORT=5175",
         "BASE_PATH=/appINLSC/",
-        "VITE_SYNC=peer",
+        "VITE_SYNC=relay",
         "npm",
         "--prefix",
         "app",
