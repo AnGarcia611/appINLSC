@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import Peer, { type DataConnection } from "peerjs"
-import type { ServerMessage, TabletEvent, TabletState } from "./types"
+import type { TabletEvent, TabletState, WireMessage } from "./types"
 
 /**
  * Sincronización funcionario ↔ tablet dentro de una sesión identificada por un código.
@@ -8,6 +8,11 @@ import type { ServerMessage, TabletEvent, TabletState } from "./types"
  *   - "peer":  WebRTC con PeerJS. No necesita servidor propio, por eso es el modo de GitHub Pages.
  *              Requiere internet solo para el emparejamiento (servidor público de PeerJS).
  * El modo lo fija el build (VITE_SYNC) y se puede forzar con ?sync=local | ?sync=peer.
+ *
+ * Reglas de la sesión:
+ *   - Ambos extremos envían un latido cada HEARTBEAT_MS; si no llega nada en PEER_TIMEOUT_MS el otro se da por perdido.
+ *   - Solo una tablet por sesión. Cada tablet tiene un identificador propio (DEVICE_ID): la misma tablet puede
+ *     reconectarse, pero otra distinta es rechazada mientras la actual siga viva.
  */
 export type SyncMode = "local" | "peer"
 
@@ -17,108 +22,198 @@ export const SYNC_MODE: SyncMode = (() => {
   return import.meta.env.VITE_SYNC === "peer" ? "peer" : "local"
 })()
 
+export const HEARTBEAT_MS = 2000
+export const PEER_TIMEOUT_MS = 6000
+
 // Sin 0/O ni 1/I/L para que el código se pueda dictar y teclear sin errores.
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
-export const newSessionCode = () =>
-  Array.from(crypto.getRandomValues(new Uint32Array(6)), (n) => ALPHABET[n % ALPHABET.length]).join("")
+const randomCode = (length: number) =>
+  Array.from(crypto.getRandomValues(new Uint32Array(length)), (n) => ALPHABET[n % ALPHABET.length]).join("")
+export const newSessionCode = () => randomCode(6)
 export const normalizeCode = (raw: string) => raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6)
 export const isValidCode = (code: string) => code.length === 6
 
+/**
+ * Identificador de esta tablet (solo lo usa la tablet). Se guarda por pestaña: sobrevive a recargas,
+ * y dos pestañas del mismo navegador cuentan como dos tablets distintas.
+ */
+const DEVICE_ID = (() => {
+  try {
+    const stored = sessionStorage.getItem("inlsc.deviceId")
+    if (stored) return stored
+    const id = randomCode(12)
+    sessionStorage.setItem("inlsc.deviceId", id)
+    return id
+  } catch { return randomCode(12) }
+})()
+
 type Role = "admin" | "tablet"
-type Outgoing<R extends Role> = R extends "admin" ? TabletState : TabletEvent
 
 /**
- * Se conecta a la sesión `code` con el rol indicado.
- * `connected`: el funcionario está registrado en el bus / la tablet está unida a la sesión del funcionario.
+ * Enlace de bajo nivel con la sesión.
+ *   linkUp:    el transporte está activo (admin registrado en el bus / tablet unida al canal).
+ *   peerAlive: el otro extremo da señales de vida (latidos o mensajes recientes).
+ *   rejected:  (tablet) la sesión ya tiene otra tablet conectada.
  */
-export function useSync<R extends Role>(role: R, code: string | null, onMessage: (msg: ServerMessage) => void) {
-  const [connected, setConnected] = useState(false)
-  const handler = useRef(onMessage)
-  handler.current = onMessage
-  const sender = useRef<(payload: Outgoing<R>) => void>(() => undefined)
+function useLink(role: Role, code: string | null, onData: (msg: WireMessage) => void) {
+  const [linkUp, setLinkUp] = useState(false)
+  const [peerAlive, setPeerAlive] = useState(false)
+  const [rejected, setRejected] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  const handler = useRef(onData)
+  handler.current = onData
+  const linkRef = useRef<Link | null>(null)
 
   useEffect(() => {
-    setConnected(false)
+    setLinkUp(false)
+    setPeerAlive(false)
+    setRejected(false)
     if (!code) return
-    const emit = (msg: ServerMessage) => handler.current(msg)
-    const link = SYNC_MODE === "peer"
-      ? (role === "admin" ? peerAdmin : peerTablet)(code, emit, setConnected)
-      : localBus(role, code, emit, setConnected)
-    sender.current = link.send as (payload: Outgoing<R>) => void
-    return () => { sender.current = () => undefined; link.close() }
-  }, [role, code])
 
-  return { connected, send: (payload: Outgoing<R>) => sender.current(payload) }
+    let lastSeen = 0
+    const lost = () => { lastSeen = 0; setPeerAlive(false) }
+    const link: Link = (SYNC_MODE === "peer" ? (role === "admin" ? peerAdmin : peerTablet) : localBus)(role, code, {
+      onUp: (up) => {
+        setLinkUp(up)
+        if (up) link.send({ type: "hb" }) // anuncia su presencia sin esperar al siguiente latido
+        else lost()
+      },
+      onMessage: (msg) => {
+        if (msg.type === "rejected") { setRejected(true); lost(); link.close(); return }
+        if (msg.type === "bye") { lost(); return }
+        lastSeen = Date.now()
+        setPeerAlive(true)
+        if (msg.type !== "hb") handler.current(msg)
+      },
+    })
+    linkRef.current = link
+
+    const beat = setInterval(() => {
+      link.send({ type: "hb" })
+      if (lastSeen && Date.now() - lastSeen > PEER_TIMEOUT_MS) lost()
+    }, HEARTBEAT_MS)
+
+    return () => { clearInterval(beat); linkRef.current = null; link.close() }
+  }, [role, code, attempt])
+
+  return {
+    linkUp,
+    peerAlive: linkUp && peerAlive,
+    rejected,
+    send: (msg: WireMessage) => linkRef.current?.send(msg),
+    retry: () => setAttempt((n) => n + 1),
+  }
 }
 
-interface Link { send: (payload: unknown) => void; close: () => void }
-type Emit = (msg: ServerMessage) => void
-
-// ── Modo local: SSE + POST contra el servidor de Vite ──
-
-function localBus(role: Role, code: string, emit: Emit, setConnected: (v: boolean) => void): Link {
-  const q = `session=${encodeURIComponent(code)}`
-  const es = new EventSource(`api/events?role=${role}&${q}`)
-  es.onopen = () => setConnected(true)
-  es.onerror = () => setConnected(false) // EventSource reintenta solo
-  es.onmessage = (e) => { try { emit(JSON.parse(e.data)) } catch { /* mensaje inválido */ } }
-  const url = role === "admin" ? `api/state?${q}` : `api/event?${q}`
+/** Panel del funcionario. `online`: conectado al bus/servidor de emparejamiento. `tablet`: hay una tablet viva. */
+export function useAdminSync(code: string | null, onEvent: (event: TabletEvent) => void) {
+  const link = useLink("admin", code, (msg) => { if (msg.type === "event") onEvent(msg.event) })
   return {
-    send: (body) => void fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => undefined),
+    online: link.linkUp,
+    tablet: link.peerAlive,
+    send: (state: TabletState) => link.send({ type: "state", state }),
+  }
+}
+
+export type TabletStatus = "connecting" | "connected" | "lost" | "rejected"
+
+/** Tablet del señante. "lost" = estuvo conectada y perdió la conexión; "connecting" = aún no se ha conectado. */
+export function useTabletSync(code: string | null, onState: (state: TabletState) => void) {
+  const link = useLink("tablet", code, (msg) => { if (msg.type === "state") onState(msg.state) })
+  const [everConnected, setEverConnected] = useState(false)
+
+  useEffect(() => { setEverConnected(false) }, [code])
+  useEffect(() => { if (link.peerAlive) setEverConnected(true) }, [link.peerAlive])
+
+  const status: TabletStatus = link.rejected ? "rejected" : link.peerAlive ? "connected" : everConnected ? "lost" : "connecting"
+  return {
+    status,
+    send: (event: TabletEvent) => link.send({ type: "event", event }),
+    retry: () => { setEverConnected(false); link.retry() },
+  }
+}
+
+interface Link { send: (msg: WireMessage) => void; close: () => void }
+interface Callbacks { onUp: (up: boolean) => void; onMessage: (msg: WireMessage) => void }
+
+// ── Modo local: SSE + POST contra el servidor de Vite (que aplica la regla de una sola tablet) ──
+
+function localBus(role: Role, code: string, cb: Callbacks): Link {
+  const q = `role=${role}&session=${encodeURIComponent(code)}&device=${DEVICE_ID}`
+  const es = new EventSource(`api/events?${q}`)
+  es.onopen = () => cb.onUp(true)
+  es.onerror = () => cb.onUp(false) // EventSource reintenta solo
+  es.onmessage = (e) => { try { cb.onMessage(JSON.parse(e.data)) } catch { /* mensaje inválido */ } }
+  return {
+    send: (msg) => {
+      if (es.readyState !== EventSource.OPEN) return
+      void fetch(`api/send?${q}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(msg) }).catch(() => undefined)
+    },
     close: () => es.close(),
   }
 }
 
-// ── Modo peer: el funcionario registra el id "inlsc-<código>" y las tablets se conectan a él ──
+// ── Modo peer: el funcionario registra el id "inlsc-<código>" y la tablet se conecta a él ──
 
 const peerId = (code: string) => `inlsc-${code}`
 const RETRY_MS = 2500
 
-function peerAdmin(code: string, emit: Emit, setConnected: (v: boolean) => void): Link {
-  const conns = new Set<DataConnection>()
-  let lastState: TabletState | null = null
+function peerAdmin(_role: Role, code: string, cb: Callbacks): Link {
+  let tablet: { conn: DataConnection; device: string; lastSeen: number } | null = null
+  let lastState: WireMessage | null = null
   let peer: Peer | null = null
   let closed = false
   let timer: ReturnType<typeof setTimeout> | undefined
 
-  const presence = () => emit({ type: "presence", tablets: conns.size })
   const retry = () => { clearTimeout(timer); if (!closed) timer = setTimeout(open, RETRY_MS) }
+
+  function accept(c: DataConnection) {
+    const device = String((c.metadata as { device?: string } | undefined)?.device ?? "")
+    const current = tablet
+    if (current && current.device !== device && current.conn.open && Date.now() - current.lastSeen < PEER_TIMEOUT_MS) {
+      c.send({ type: "rejected" } satisfies WireMessage)
+      setTimeout(() => c.close(), 500)
+      return
+    }
+    current?.conn.close() // misma tablet reconectándose, o una anterior que ya no responde
+    tablet = { conn: c, device, lastSeen: Date.now() }
+    if (lastState) c.send(lastState)
+  }
 
   function open() {
     peer?.destroy()
     const p = new Peer(peerId(code), { debug: 0 })
     peer = p
-    p.on("open", () => setConnected(true))
+    p.on("open", () => cb.onUp(true))
     p.on("connection", (c) => {
-      c.on("open", () => {
-        conns.add(c)
-        if (lastState) c.send({ type: "state", state: lastState } satisfies ServerMessage)
-        presence()
+      c.on("open", () => accept(c))
+      c.on("data", (msg) => {
+        if (tablet?.conn !== c) return
+        tablet.lastSeen = Date.now()
+        cb.onMessage(msg as WireMessage)
       })
-      c.on("data", (event) => emit({ type: "tabletEvent", event: event as TabletEvent }))
-      const drop = () => { if (conns.delete(c)) presence() }
+      const drop = () => { if (tablet?.conn === c) { tablet = null; cb.onMessage({ type: "bye" }) } }
       c.on("close", drop)
       c.on("error", drop)
     })
-    p.on("disconnected", () => { setConnected(false); if (!closed && !p.destroyed) p.reconnect() })
+    p.on("disconnected", () => { cb.onUp(false); if (!closed && !p.destroyed) p.reconnect() })
     // "unavailable-id": el id aún está ocupado (p. ej. tras recargar la página); se libera en segundos.
-    p.on("error", (err) => { if (err.type !== "peer-unavailable") { setConnected(false); retry() } })
+    p.on("error", (err) => { if (err.type !== "peer-unavailable") { cb.onUp(false); retry() } })
   }
 
   // Diferido para que el doble montaje de StrictMode no registre el mismo id dos veces.
   timer = setTimeout(open, 0)
 
   return {
-    send: (state) => {
-      const msg: ServerMessage = { type: "state", state: state as TabletState }
-      lastState = msg.state
-      conns.forEach((c) => { if (c.open) c.send(msg) })
+    send: (msg) => {
+      if (msg.type === "state") lastState = msg
+      if (tablet?.conn.open) tablet.conn.send(msg)
     },
-    close: () => { closed = true; clearTimeout(timer); conns.clear(); peer?.destroy() },
+    close: () => { closed = true; clearTimeout(timer); tablet = null; peer?.destroy() },
   }
 }
 
-function peerTablet(code: string, emit: Emit, setConnected: (v: boolean) => void): Link {
+function peerTablet(_role: Role, code: string, cb: Callbacks): Link {
   let peer: Peer | null = null
   let conn: DataConnection | null = null
   let closed = false
@@ -128,10 +223,10 @@ function peerTablet(code: string, emit: Emit, setConnected: (v: boolean) => void
 
   function connect() {
     if (!peer || peer.destroyed || !peer.open) { later(open); return }
-    const c = peer.connect(peerId(code), { reliable: true })
-    c.on("open", () => { conn = c; setConnected(true) })
-    c.on("data", (msg) => emit(msg as ServerMessage))
-    c.on("close", () => { if (conn === c) conn = null; setConnected(false); later(connect) })
+    const c = peer.connect(peerId(code), { reliable: true, metadata: { device: DEVICE_ID } })
+    c.on("open", () => { conn = c; cb.onUp(true) })
+    c.on("data", (msg) => cb.onMessage(msg as WireMessage))
+    c.on("close", () => { if (conn === c) conn = null; cb.onUp(false); later(connect) })
   }
 
   function open() {
@@ -141,7 +236,7 @@ function peerTablet(code: string, emit: Emit, setConnected: (v: boolean) => void
     p.on("open", connect)
     p.on("disconnected", () => { if (!closed && !p.destroyed) p.reconnect() })
     p.on("error", (err) => {
-      setConnected(false)
+      cb.onUp(false)
       // "peer-unavailable": el funcionario aún no abre esa sesión; se reintenta la conexión.
       if (err.type === "peer-unavailable") later(connect)
       else later(open)
@@ -151,7 +246,7 @@ function peerTablet(code: string, emit: Emit, setConnected: (v: boolean) => void
   timer = setTimeout(open, 0)
 
   return {
-    send: (event) => { if (conn?.open) conn.send(event) },
+    send: (msg) => { if (conn?.open) conn.send(msg) },
     close: () => { closed = true; clearTimeout(timer); peer?.destroy() },
   }
 }

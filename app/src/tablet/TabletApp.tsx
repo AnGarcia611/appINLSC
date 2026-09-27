@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { isValidCode, normalizeCode, useSync } from "../shared/sync"
+import { isValidCode, normalizeCode, useTabletSync, type TabletStatus } from "../shared/sync"
 import type { TabletState } from "../shared/types"
 import TabletScreen from "./TabletScreen"
 
@@ -34,7 +34,7 @@ export default function TabletApp() {
     history.replaceState(null, "", url)
   }
 
-  const { connected, send } = useSync("tablet", code, (msg) => { if (msg.type === "state") setState(msg.state) })
+  const { status, send, retry } = useTabletSync(code, setState)
 
   // Un toque inicial es necesario en iPad/Android para pedir la cámara, pantalla completa y mantenerla encendida.
   async function start() {
@@ -60,14 +60,10 @@ export default function TabletApp() {
         state={state}
         stream={state.camera ? stream : null}
         cameraError={cameraError}
-        onSelect={(index) => send({ type: "select", index })}
+        onSelect={(index) => { if (status === "connected") send({ type: "select", index }) }}
       />
-      {!connected && (
-        <div className="tablet-offline">
-          ◌ Conectando con recepción · sesión {code}
-          <button onClick={() => setCode(null)}>Cambiar código</button>
-        </div>
-      )}
+      <ConnectionBadge status={status} code={code} />
+      {status !== "connected" && <ConnectionOverlay status={status} code={code} onRetry={retry} onChangeCode={() => setCode(null)} />}
       {!started && (
         <button className="tablet-start" onClick={start}>
           <span>✋</span>
@@ -75,6 +71,54 @@ export default function TabletApp() {
           Toque la pantalla para activar la tablet
         </button>
       )}
+    </div>
+  )
+}
+
+function ConnectionBadge({ status, code }: { status: TabletStatus; code: string }) {
+  const ok = status === "connected"
+  return (
+    <div className={`conn-badge ${ok ? "ok" : "off"}`} role="status">
+      {ok ? "● Conectada a recepción" : "○ Sin conexión"} · {code}
+    </div>
+  )
+}
+
+const OVERLAY_TEXT: Record<Exclude<TabletStatus, "connected">, { icon: string; title: string; text: string }> = {
+  connecting: {
+    icon: "◌",
+    title: "Conectando con recepción…",
+    text: "Asegúrese de que el panel InLSC esté abierto en el computador del funcionario.",
+  },
+  lost: {
+    icon: "⚠",
+    title: "Se perdió la conexión con recepción",
+    text: "Reconectando automáticamente. La atención continuará en el mismo punto.",
+  },
+  rejected: {
+    icon: "⛔",
+    title: "Esta sesión ya tiene una tablet conectada",
+    text: "Solo una tablet puede estar conectada a cada computador. Desconecte la otra tablet o use otro código.",
+  },
+}
+
+/** Aviso a pantalla completa mientras la tablet no está conectada; bloquea los toques sobre la pantalla. */
+function ConnectionOverlay({ status, code, onRetry, onChangeCode }: {
+  status: Exclude<TabletStatus, "connected">; code: string; onRetry: () => void; onChangeCode: () => void
+}) {
+  const { icon, title, text } = OVERLAY_TEXT[status]
+  return (
+    <div className={`conn-overlay ${status}`} role="alert">
+      <div className="conn-card">
+        <span className={status === "rejected" ? "" : "conn-spin"}>{icon}</span>
+        <strong>{title}</strong>
+        <p>{text}</p>
+        <small>Sesión {code}</small>
+        <div className="conn-actions">
+          {status === "rejected" && <button onClick={onRetry}>Reintentar</button>}
+          <button onClick={onChangeCode}>Cambiar código</button>
+        </div>
+      </div>
     </div>
   )
 }

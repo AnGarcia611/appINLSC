@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import QRCode from "qrcode"
 import { IPS_NAME, SEDE } from "../shared/config"
-import { SYNC_MODE, newSessionCode, useSync } from "../shared/sync"
+import { SYNC_MODE, newSessionCode, useAdminSync } from "../shared/sync"
 import { loadManifest, type VideoManifest } from "../shared/videos"
 import type { Gender } from "../shared/types"
 import TabletScreen from "../tablet/TabletScreen"
@@ -24,7 +24,6 @@ export default function AdminApp() {
   const [side, setSide] = useStored<Side>("inlsc.side", "right")
   const [open, setOpen] = useState(false)
   const [settings, setSettings] = useState(false)
-  const [tablets, setTablets] = useState(0)
   const [manifest, setManifest] = useState<VideoManifest>({})
   // Código de la sesión de emparejamiento. Se conserva al recargar para que la tablet se reconecte sola.
   const [code, setCode] = useStored<string>("inlsc.session", "")
@@ -33,21 +32,19 @@ export default function AdminApp() {
   useEffect(() => { loadManifest().then(setManifest) }, [])
   useEffect(() => { if (!code) setCode(newSessionCode()) }, [code]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const sync = useSync("admin", code || null, (msg) => {
-    if (msg.type === "presence") setTablets(msg.tablets)
-    if (msg.type === "tabletEvent" && msg.event.type === "select") actions.selectByTouch(msg.event.index)
-  })
-  const connected = sync.connected
-  useEffect(() => { setTablets(0) }, [code])
+  const sync = useAdminSync(code || null, (event) => { if (event.type === "select") actions.selectByTouch(event.index) })
+  // Sin tablet conectada no se puede iniciar ni avanzar; una atención en curso queda en pausa.
+  const tablet = sync.tablet
 
   const tabletState = useMemo(() => buildTabletState(session, gender, manifest), [session, gender, manifest])
   const serialized = JSON.stringify(tabletState)
-  // `connected` en las dependencias: al (re)conectarse se vuelve a publicar el estado actual.
-  useEffect(() => { sync.send(tabletState) }, [serialized, connected]) // eslint-disable-line react-hooks/exhaustive-deps
+  // `tablet` en las dependencias: al (re)conectarse la tablet se vuelve a publicar el estado actual.
+  useEffect(() => { sync.send(tabletState) }, [serialized, tablet, sync.online]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const pairing = <TabletPairing code={code} onNewCode={() => setCode(newSessionCode())} />
 
-  const startAttention = () => { setOpen(true); if (!session.active) actions.start() }
+  const startAttention = () => { setOpen(true); if (!session.active && tablet) actions.start() }
+  const connection = <ConnectionAlert online={sync.online} tablet={tablet} paused={session.active} pairing={pairing} />
 
   return (
     <div className="portal">
@@ -60,6 +57,7 @@ export default function AdminApp() {
             <>
               <p className="launcher-eyebrow">ATENCIÓN EN CURSO</p>
               <h2>{session.path?.name ?? "Nueva atención"}</h2>
+              {!tablet && <p className="launcher-alert">⏸ En pausa: tablet desconectada</p>}
               <button className="launcher-start" onClick={() => setOpen(true)}>Abrir panel →</button>
             </>
           ) : (
@@ -67,8 +65,8 @@ export default function AdminApp() {
               <p className="launcher-eyebrow">ATENCIÓN INCLUSIVA</p>
               <h2>¿Necesita ayuda?</h2>
               <p>Inicie una atención administrativa en Lengua de Señas Colombiana.</p>
-              <button className="launcher-start" onClick={startAttention}>Iniciar atención →</button>
-              <p className="launcher-note">{tablets ? "● Tablet conectada" : "○ Tablet sin conectar"} · Sesión {code}</p>
+              <button className="launcher-start" onClick={startAttention}>{tablet ? "Iniciar atención →" : "Conectar tablet →"}</button>
+              <p className={`launcher-note ${tablet ? "ok" : "off"}`}>{tablet ? "● Tablet conectada" : "○ Tablet desconectada"} · Sesión {code}</p>
             </>
           )}
         </section>
@@ -82,8 +80,8 @@ export default function AdminApp() {
               <strong>InLSC</strong>
               <span>{session.path ? `${session.path.icon} ${session.path.name}` : session.active ? "Nueva atención · Recepción" : "Recepción"}</span>
             </div>
-            <span className={`status ${connected && tablets ? "ok" : "off"}`} title="Estado de la tablet">
-              {connected ? (tablets ? "● Tablet" : "○ Sin tablet") : SYNC_MODE === "peer" ? "○ Sin conexión" : "○ Sin servidor"}
+            <span className={`status ${tablet ? "ok" : "off"}`} title="Estado de la tablet">
+              {tablet ? "● Tablet conectada" : sync.online ? "○ Sin tablet" : "○ Sin conexión"}
             </span>
             <button className="icon-btn" onClick={() => setSettings(!settings)} aria-label="Configuración">⚙</button>
             <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Minimizar">—</button>
@@ -91,7 +89,9 @@ export default function AdminApp() {
 
           <div className="demo-badge">MODO DEMO · reconocimiento de señas simulado</div>
 
-          {settings && <Settings gender={gender} setGender={setGender} side={side} setSide={setSide} pairing={pairing} />}
+          {connection}
+
+          {settings && <Settings gender={gender} setGender={setGender} side={side} setSide={setSide} pairing={tablet ? pairing : null} />}
 
           <div className="dock-body">
             {session.active ? (
@@ -103,24 +103,46 @@ export default function AdminApp() {
                     <TabletScreen state={tabletState} stream={null} preview />
                   </ScaledPreview>
                 </div>
-                <StepControls session={session} actions={actions} />
+                {/* fieldset deshabilitado: bloquea todos los botones y campos del paso mientras no hay tablet */}
+                <fieldset className="controls-lock" disabled={!tablet}>
+                  <StepControls session={session} actions={actions} />
+                </fieldset>
               </>
             ) : (
               <div className="dock-idle">
                 {session.finished && <div className="done-card"><span>✓</span><strong>Trámite completado</strong></div>}
-                {!tablets && pairing}
-                <button className="btn primary" onClick={actions.start}>{session.finished ? "Nueva atención" : "Iniciar atención"} →</button>
+                <button className="btn primary" onClick={actions.start} disabled={!tablet} title={tablet ? undefined : "Conecte la tablet para iniciar"}>{session.finished ? "Nueva atención" : "Iniciar atención"} →</button>
               </div>
             )}
           </div>
 
           <footer className="dock-footer">
-            {session.active && <button className="btn ghost sm" onClick={actions.replay}>↻ Repetir video</button>}
+            {session.active && <button className="btn ghost sm" onClick={actions.replay} disabled={!tablet}>↻ Repetir video</button>}
             {session.active && <button className="btn ghost sm" onClick={actions.cancel}>✕ Cancelar atención</button>}
             <span>El sistema de la IPS sigue disponible en el resto de la pantalla.</span>
           </footer>
         </aside>
       )}
+    </div>
+  )
+}
+
+/** Aviso visible cuando no hay tablet conectada (o no hay conexión con el bus). Incluye el QR para conectarla. */
+function ConnectionAlert({ online, tablet, paused, pairing }: { online: boolean; tablet: boolean; paused: boolean; pairing: React.ReactNode }) {
+  if (tablet) return null
+  const title = paused ? "⏸ Atención en pausa: tablet desconectada" : "Tablet desconectada"
+  const text = !online
+    ? SYNC_MODE === "peer"
+      ? "No hay conexión con el servicio de emparejamiento. Revise la conexión a internet del computador."
+      : "No hay conexión con el servidor local. Verifique que `npm run dev` siga en ejecución."
+    : paused
+      ? "No se puede avanzar hasta que la tablet se reconecte. La atención continuará en el mismo paso."
+      : "Conecte la tablet para iniciar una atención."
+  return (
+    <div className="conn-alert" role="alert">
+      <strong>{title}</strong>
+      <span>{text}</span>
+      {pairing}
     </div>
   )
 }

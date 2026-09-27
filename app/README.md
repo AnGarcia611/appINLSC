@@ -11,6 +11,9 @@ Cada panel del funcionario abre una **sesión** con un código de 6 caracteres (
 
 - El código se conserva al recargar el panel, y la tablet recuerda el último código: si algo se desconecta, ambos se reconectan solos.
 - *↻ Nueva sesión* genera otro código y desconecta las tablets actuales. En la tablet, *Cambiar código* aparece mientras no hay conexión.
+- **Una sola tablet por PC.** Si otra tablet intenta unirse a una sesión ocupada, ve *"Esta sesión ya tiene una tablet conectada"*. La misma tablet (misma pestaña) sí puede recargar y reconectarse.
+- **Estado explícito.** PC y tablet se envían un latido cada 2 s; si no llega nada en 6 s, el otro extremo se da por perdido. El PC muestra *Tablet conectada / desconectada* y la tablet muestra un indicador y un aviso a pantalla completa cuando no hay conexión.
+- **Sin tablet no se avanza.** No se puede iniciar una atención ni avanzar pasos. Si la tablet se pierde a mitad de una atención, esta queda **en pausa** y continúa en el mismo paso al reconectarse (*Cancelar atención* sigue disponible).
 
 Hay dos modos de transporte (`src/shared/sync.ts`):
 
