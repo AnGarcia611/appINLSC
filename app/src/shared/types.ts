@@ -34,7 +34,10 @@ export interface TabletState {
 /** Lo que la tablet envía al panel del funcionario. */
 export type TabletEvent = { type: "select"; index: number }
 
-export type ServerMessage =
-  | { type: "state"; state: TabletState }
-  | { type: "presence"; tablets: number }
-  | { type: "tabletEvent"; event: TabletEvent }
+/** Mensajes entre el panel y la tablet (por el servidor local o por WebRTC). */
+export type WireMessage =
+  | { type: "state"; state: TabletState } // panel → tablet
+  | { type: "event"; event: TabletEvent } // tablet → panel
+  | { type: "hb" } //                        latido, en ambos sentidos
+  | { type: "bye" } //                       el otro extremo se desconectó
+  | { type: "rejected" } //                  → tablet: la sesión ya tiene otra tablet
