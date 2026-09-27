@@ -1,0 +1,48 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "inlsc",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "app",
+        "run",
+        "dev"
+      ],
+      "port": 5173,
+      "url": "https://localhost:5173"
+    },
+    {
+      "name": "inlsc-http",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "INLSC_HTTP=1",
+        "PORT=5174",
+        "npm",
+        "--prefix",
+        "app",
+        "run",
+        "dev"
+      ],
+      "port": 5174
+    },
+    {
+      "name": "inlsc-pages",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "INLSC_HTTP=1",
+        "PORT=5175",
+        "BASE_PATH=/appINLSC/",
+        "VITE_SYNC=peer",
+        "npm",
+        "--prefix",
+        "app",
+        "run",
+        "start"
+      ],
+      "port": 5175,
+      "url": "http://localhost:5175"
+    }
+  ]
+}

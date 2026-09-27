@@ -1,0 +1,51 @@
+{
+  "saludo": [
+    "h",
+    "m"
+  ],
+  "solicitud": [
+    "h",
+    "m"
+  ],
+  "documento": [
+    "h",
+    "m"
+  ],
+  "especialidad": [
+    "h",
+    "m"
+  ],
+  "seleccion": [
+    "h",
+    "m"
+  ],
+  "negacion": [
+    "m"
+  ],
+  "despedida": [
+    "h",
+    "m"
+  ],
+  "cancelada": [
+    "h",
+    "m"
+  ],
+  "orden_medica": [
+    "m"
+  ],
+  "pago_efectivo": [
+    "m"
+  ],
+  "valor": [
+    "raw"
+  ],
+  "recibo": [
+    "m"
+  ],
+  "espera_sala": [
+    "m"
+  ],
+  "con_gusto": [
+    "m"
+  ]
+}

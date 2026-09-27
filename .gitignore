@@ -1,0 +1,5 @@
+.DS_Store
+node_modules/
+app/dist/
+# Videos originales (≈230 MB). La app usa las copias normalizadas de app/public/videos (npm run videos).
+Videos_señantes/
