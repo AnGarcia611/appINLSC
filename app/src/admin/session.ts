@@ -42,7 +42,7 @@ export const currentStep = (s: Session): Step => stepsOf(s)[s.index]
 export const citaOptions = (): MenuOption[] =>
   MOCK_CITAS.map((c) => {
     const sp = specialtyByName(c.specialty)
-    return { tab: c.specialty, text: `${formatDate(c.date)} · ${formatTime(c.time)}`, icon: sp?.icon ?? "📋", color: sp?.color ?? "#145da0" }
+    return { tab: c.specialty, text: `${formatDate(c.date)} · ${formatTime(c.time)}`, icon: sp?.icon ?? "event_available", color: sp?.color ?? "#145da0" }
   })
 
 /** Número de opciones que el señante puede elegir en el paso actual (0 si no hay infografía enviada). */

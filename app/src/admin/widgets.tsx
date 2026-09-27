@@ -5,7 +5,8 @@ export function ConfidenceBar({ value, animating, label }: { value: number; anim
   const [shown, setShown] = useState(animating ? 0 : value)
 
   useEffect(() => {
-    if (!animating) { setShown(value); return }
+    // Con "reducir movimiento" activo en el sistema se muestra el valor final sin animar.
+    if (!animating || matchMedia("(prefers-reduced-motion: reduce)").matches) { setShown(value); return }
     setShown(0)
     const started = performance.now()
     let frame = 0
@@ -24,7 +25,7 @@ export function ConfidenceBar({ value, animating, label }: { value: number; anim
   return (
     <div className="conf">
       <div className="conf-head"><span>{label}</span><strong style={{ color }}>{shown} %</strong></div>
-      <div className="conf-track"><div className="conf-fill" style={{ width: `${shown}%`, background: color }} /></div>
+      <div className="conf-track" role="progressbar" aria-label={label} aria-valuenow={shown} aria-valuemin={0} aria-valuemax={100}><div className="conf-fill" style={{ width: `${shown}%`, background: color }} /></div>
       <div className="conf-band" style={{ color }}>{band}</div>
     </div>
   )

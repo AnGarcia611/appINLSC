@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { isValidCode, normalizeCode, useTabletSync, type TabletStatus } from "../shared/sync"
 import type { TabletState } from "../shared/types"
+import Icon, { type IconName } from "../shared/Icon"
 import TabletScreen from "./TabletScreen"
 
 const INITIAL: TabletState = { seq: 0, view: { kind: "idle" }, camera: false }
@@ -66,7 +67,7 @@ export default function TabletApp() {
       {status !== "connected" && <ConnectionOverlay status={status} code={code} onRetry={retry} onChangeCode={() => setCode(null)} />}
       {!started && (
         <button className="tablet-start" onClick={start}>
-          <span>✋</span>
+          <Icon name="front_hand" fill />
           <strong>InLSC</strong>
           Toque la pantalla para activar la tablet
         </button>
@@ -79,24 +80,24 @@ function ConnectionBadge({ status, code }: { status: TabletStatus; code: string 
   const ok = status === "connected"
   return (
     <div className={`conn-badge ${ok ? "ok" : "off"}`} role="status">
-      {ok ? "● Conectada a recepción" : "○ Sin conexión"} · {code}
+      <Icon name={ok ? "check_circle" : "link_off"} fill={ok} /> {ok ? "Conectada a recepción" : "Sin conexión"} · {code}
     </div>
   )
 }
 
-const OVERLAY_TEXT: Record<Exclude<TabletStatus, "connected">, { icon: string; title: string; text: string }> = {
+const OVERLAY_TEXT: Record<Exclude<TabletStatus, "connected">, { icon: IconName; title: string; text: string }> = {
   connecting: {
-    icon: "◌",
+    icon: "sync",
     title: "Conectando con recepción…",
     text: "Asegúrese de que el panel InLSC esté abierto en el computador del funcionario.",
   },
   lost: {
-    icon: "⚠",
+    icon: "warning",
     title: "Se perdió la conexión con recepción",
     text: "Reconectando automáticamente. La atención continuará en el mismo punto.",
   },
   rejected: {
-    icon: "⛔",
+    icon: "block",
     title: "Esta sesión ya tiene una tablet conectada",
     text: "Solo una tablet puede estar conectada a cada computador. Desconecte la otra tablet o use otro código.",
   },
@@ -110,7 +111,7 @@ function ConnectionOverlay({ status, code, onRetry, onChangeCode }: {
   return (
     <div className={`conn-overlay ${status}`} role="alert">
       <div className="conn-card">
-        <span className={status === "rejected" ? "" : "conn-spin"}>{icon}</span>
+        <span className={status === "rejected" ? "" : "conn-spin"}><Icon name={icon} fill={status !== "connecting"} /></span>
         <strong>{title}</strong>
         <p>{text}</p>
         <small>Sesión {code}</small>
@@ -128,7 +129,7 @@ function CodeEntry({ onSubmit }: { onSubmit: (code: string) => void }) {
   const valid = isValidCode(value)
   return (
     <form className="tablet-code" onSubmit={(e) => { e.preventDefault(); if (valid) onSubmit(value) }}>
-      <span>✋</span>
+      <Icon name="front_hand" fill />
       <strong>InLSC</strong>
       <label htmlFor="code">Escriba el código de sesión que aparece en el panel del funcionario</label>
       <input

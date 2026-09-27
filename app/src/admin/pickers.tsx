@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { SPECIALTIES, formatDate, formatTime, specialtyByName } from "../shared/catalog"
+import Icon from "../shared/Icon"
 import type { MenuOption, Slot } from "../shared/types"
 
 const MAX_OPTIONS = 9
@@ -35,16 +36,16 @@ export function SpecialtyPicker({ onSend }: { onSend: (options: MenuOption[]) =>
   return (
     <div className="picker">
       <div className="picker-row">
-        <input placeholder="Buscar especialidad…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <input placeholder="Buscar especialidad…" aria-label="Buscar especialidad" value={query} onChange={(e) => setQuery(e.target.value)} />
         <button className="btn ghost sm" onClick={() => setChosen(EXAMPLE_SERVICES.map(([a, b]) => toOption(a, b)))}>Ejemplo</button>
       </div>
       <div className="picker-list">
         {visible.map((sp) => (
           <div key={sp.name} className="picker-group">
-            <button className="picker-head" onClick={() => setOpen(open === sp.name ? null : sp.name)}>
-              <span className="dot" style={{ background: sp.color }} />{sp.icon} {sp.name}
+            <button className="picker-head" aria-expanded={open === sp.name} onClick={() => setOpen(open === sp.name ? null : sp.name)}>
+              <span className="dot" style={{ background: sp.color }} /><Icon name={sp.icon} /> {sp.name}
               <em>{chosen.filter((c) => c.tab === sp.name).length || ""}</em>
-              <span>{open === sp.name ? "▾" : "▸"}</span>
+              <Icon name={open === sp.name ? "keyboard_arrow_down" : "chevron_right"} />
             </button>
             {open === sp.name && sp.services.map((sv) => {
               const o = toOption(sp.name, sv)
@@ -59,11 +60,11 @@ export function SpecialtyPicker({ onSend }: { onSend: (options: MenuOption[]) =>
       </div>
       {chosen.length > 0 && (
         <ol className="picker-chosen">
-          {chosen.map((c, i) => <li key={i}><b>{i + 1}</b> {c.tab} · {c.text} <button onClick={() => toggle(c)} aria-label="Quitar">✕</button></li>)}
+          {chosen.map((c, i) => <li key={i}><b>{i + 1}</b> {c.tab} · {c.text} <button onClick={() => toggle(c)} aria-label={`Quitar ${c.tab} · ${c.text}`}><Icon name="close" /></button></li>)}
         </ol>
       )}
       <button className="btn primary" disabled={!chosen.length} onClick={() => onSend(chosen)}>
-        Enviar a la tablet ({chosen.length}/{MAX_OPTIONS}) →
+        Enviar a la tablet ({chosen.length}/{MAX_OPTIONS}) <Icon name="arrow_forward" />
       </button>
     </div>
   )
@@ -88,19 +89,19 @@ export function SlotPicker({ onSend, onNone }: { onSend: (slots: Slot[]) => void
   return (
     <div className="picker">
       <div className="picker-row">
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-        <button className="btn ghost sm" onClick={add} disabled={!date}>+ Agregar</button>
+        <input type="date" aria-label="Fecha" value={date} onChange={(e) => setDate(e.target.value)} />
+        <input type="time" aria-label="Hora" value={time} onChange={(e) => setTime(e.target.value)} />
+        <button className="btn ghost sm" onClick={add} disabled={!date}><Icon name="add" /> Agregar</button>
       </div>
       <button className="btn ghost sm" onClick={() => setSlots(EXAMPLE_SLOTS)}>Usar horarios de ejemplo</button>
       {slots.length > 0 && (
         <ol className="picker-chosen">
           {slots.map((s, i) => (
-            <li key={i}><b>{i + 1}</b> {formatDate(s.date)} · {formatTime(s.time)} <button onClick={() => setSlots(slots.filter((_, j) => j !== i))} aria-label="Quitar">✕</button></li>
+            <li key={i}><b>{i + 1}</b> {formatDate(s.date)} · {formatTime(s.time)} <button onClick={() => setSlots(slots.filter((_, j) => j !== i))} aria-label={`Quitar ${formatDate(s.date)} ${formatTime(s.time)}`}><Icon name="close" /></button></li>
           ))}
         </ol>
       )}
-      <button className="btn primary" disabled={!slots.length} onClick={() => onSend(slots)}>Enviar horarios a la tablet ({slots.length}) →</button>
+      <button className="btn primary" disabled={!slots.length} onClick={() => onSend(slots)}>Enviar horarios a la tablet ({slots.length}) <Icon name="arrow_forward" /></button>
       <button className="btn danger-ghost" onClick={onNone}>Sin disponibilidad · mostrar video de negación</button>
     </div>
   )
@@ -112,10 +113,10 @@ export function AmountInput({ onSend }: { onSend: (amount: number) => void }) {
   return (
     <div className="picker">
       <div className="picker-row">
-        <span className="currency">$</span>
-        <input inputMode="numeric" placeholder="Valor de la factura" value={value ? amount.toLocaleString("es-CO") : ""} onChange={(e) => setValue(e.target.value)} />
+        <span className="currency" aria-hidden="true">$</span>
+        <input inputMode="numeric" placeholder="Valor de la factura" aria-label="Valor de la factura en pesos" value={value ? amount.toLocaleString("es-CO") : ""} onChange={(e) => setValue(e.target.value)} />
       </div>
-      <button className="btn primary" disabled={!amount} onClick={() => onSend(amount)}>Mostrar valor en la tablet →</button>
+      <button className="btn primary" disabled={!amount} onClick={() => onSend(amount)}>Mostrar valor en la tablet <Icon name="arrow_forward" /></button>
     </div>
   )
 }

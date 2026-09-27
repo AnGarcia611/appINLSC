@@ -7,6 +7,7 @@ import type { Gender } from "../shared/types"
 import TabletScreen from "../tablet/TabletScreen"
 import StepControls from "./StepControls"
 import { buildTabletState, stepsOf, useSession } from "./session"
+import Icon from "../shared/Icon"
 import { ScaledPreview } from "./widgets"
 
 type Side = "right" | "left"
@@ -52,21 +53,21 @@ export default function AdminApp() {
 
       {!open && (
         <section className={`launcher ${side}`}>
-          <div className="launcher-top"><div className="brand-mark">✋</div><div><strong>InLSC</strong><span>Asistente en LSC salud</span></div></div>
+          <div className="launcher-top"><div className="brand-mark"><Icon name="front_hand" fill /></div><div><strong>InLSC</strong><span>Asistente en LSC salud</span></div></div>
           {session.active ? (
             <>
               <p className="launcher-eyebrow">ATENCIÓN EN CURSO</p>
               <h2>{session.path?.name ?? "Nueva atención"}</h2>
-              {!tablet && <p className="launcher-alert">⏸ En pausa: tablet desconectada</p>}
-              <button className="launcher-start" onClick={() => setOpen(true)}>Abrir panel →</button>
+              {!tablet && <p className="launcher-alert"><Icon name="pause_circle" fill /> En pausa: tablet desconectada</p>}
+              <button className="launcher-start" onClick={() => setOpen(true)}>Abrir panel <Icon name="arrow_forward" /></button>
             </>
           ) : (
             <>
               <p className="launcher-eyebrow">ATENCIÓN INCLUSIVA</p>
               <h2>¿Necesita ayuda?</h2>
               <p>Inicie una atención administrativa en Lengua de Señas Colombiana.</p>
-              <button className="launcher-start" onClick={startAttention}>{tablet ? "Iniciar atención →" : "Conectar tablet →"}</button>
-              <p className={`launcher-note ${tablet ? "ok" : "off"}`}>{tablet ? "● Tablet conectada" : "○ Tablet desconectada"} · Sesión {code}</p>
+              <button className="launcher-start" onClick={startAttention}>{tablet ? "Iniciar atención" : "Conectar tablet"} <Icon name="arrow_forward" /></button>
+              <p className={`launcher-note ${tablet ? "ok" : "off"}`}><Icon name={tablet ? "check_circle" : "link_off"} fill={tablet} /> {tablet ? "Tablet conectada" : "Tablet desconectada"} · Sesión {code}</p>
             </>
           )}
         </section>
@@ -75,16 +76,17 @@ export default function AdminApp() {
       {open && (
         <aside className={`dock ${side}`}>
           <header className="dock-header">
-            <div className="brand-mark">✋</div>
+            <div className="brand-mark"><Icon name="front_hand" fill /></div>
             <div className="dock-title">
               <strong>InLSC</strong>
-              <span>{session.path ? `${session.path.icon} ${session.path.name}` : session.active ? "Nueva atención · Recepción" : "Recepción"}</span>
+              <span>{session.path ? <><Icon name={session.path.icon} /> {session.path.name}</> : session.active ? "Nueva atención · Recepción" : "Recepción"}</span>
             </div>
             <span className={`status ${tablet ? "ok" : "off"}`} title="Estado de la tablet">
-              {tablet ? "● Tablet conectada" : sync.online ? "○ Sin tablet" : "○ Sin conexión"}
+              <Icon name={tablet ? "check_circle" : sync.online ? "link_off" : "wifi_off"} fill={tablet} />
+              {tablet ? "Tablet conectada" : sync.online ? "Sin tablet" : "Sin conexión"}
             </span>
-            <button className="icon-btn" onClick={() => setSettings(!settings)} aria-label="Configuración">⚙</button>
-            <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Minimizar">—</button>
+            <button className="icon-btn" onClick={() => setSettings(!settings)} aria-label="Configuración" aria-expanded={settings}><Icon name="settings" /></button>
+            <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Minimizar panel"><Icon name="remove" /></button>
           </header>
 
           <div className="demo-badge">MODO DEMO · reconocimiento de señas simulado</div>
@@ -110,15 +112,15 @@ export default function AdminApp() {
               </>
             ) : (
               <div className="dock-idle">
-                {session.finished && <div className="done-card"><span>✓</span><strong>Trámite completado</strong></div>}
-                <button className="btn primary" onClick={actions.start} disabled={!tablet} title={tablet ? undefined : "Conecte la tablet para iniciar"}>{session.finished ? "Nueva atención" : "Iniciar atención"} →</button>
+                {session.finished && <div className="done-card"><span><Icon name="check" /></span><strong>Trámite completado</strong></div>}
+                <button className="btn primary" onClick={actions.start} disabled={!tablet} title={tablet ? undefined : "Conecte la tablet para iniciar"}>{session.finished ? "Nueva atención" : "Iniciar atención"} <Icon name="arrow_forward" /></button>
               </div>
             )}
           </div>
 
           <footer className="dock-footer">
-            {session.active && <button className="btn ghost sm" onClick={actions.replay} disabled={!tablet}>↻ Repetir video</button>}
-            {session.active && <button className="btn ghost sm" onClick={actions.cancel}>✕ Cancelar atención</button>}
+            {session.active && <button className="btn ghost sm" onClick={actions.replay} disabled={!tablet}><Icon name="replay" /> Repetir video</button>}
+            {session.active && <button className="btn ghost sm" onClick={actions.cancel}><Icon name="close" /> Cancelar atención</button>}
             <span>El sistema de la IPS sigue disponible en el resto de la pantalla.</span>
           </footer>
         </aside>
@@ -130,7 +132,7 @@ export default function AdminApp() {
 /** Aviso visible cuando no hay tablet conectada (o no hay conexión con el bus). Incluye el QR para conectarla. */
 function ConnectionAlert({ online, tablet, paused, pairing }: { online: boolean; tablet: boolean; paused: boolean; pairing: React.ReactNode }) {
   if (tablet) return null
-  const title = paused ? "⏸ Atención en pausa: tablet desconectada" : "Tablet desconectada"
+  const title = paused ? "Atención en pausa: tablet desconectada" : "Tablet desconectada"
   const text = !online
     ? SYNC_MODE === "peer"
       ? "No hay conexión con el servicio de emparejamiento. Revise la conexión a internet del computador."
@@ -140,7 +142,7 @@ function ConnectionAlert({ online, tablet, paused, pairing }: { online: boolean;
       : "Conecte la tablet para iniciar una atención."
   return (
     <div className="conn-alert" role="alert">
-      <strong>{title}</strong>
+      <strong><Icon name={paused ? "pause_circle" : "link_off"} fill={paused} /> {title}</strong>
       <span>{text}</span>
       {pairing}
     </div>
@@ -152,7 +154,7 @@ function AdminSteps({ labels, current, color = "var(--blue)" }: { labels: string
     <ol className="adm-steps" style={{ "--c": color } as React.CSSProperties}>
       {labels.map((l, i) => (
         <li key={i} className={i < current ? "done" : i === current ? "active" : ""} title={l}>
-          <span>{i < current ? "✓" : i + 1}</span><small>{l}</small>
+          <span>{i < current ? <Icon name="check" label="Completado" /> : i + 1}</span><small>{l}</small>
         </li>
       ))}
     </ol>
@@ -165,16 +167,16 @@ function Settings({ gender, setGender, side, setSide, pairing }: { gender: Gende
       <div className="field">
         Intérprete de los videos (según perfil del funcionario)
         <div className="seg">
-          <button className={gender === "m" ? "on" : ""} onClick={() => setGender("m")}>Mujer</button>
-          <button className={gender === "h" ? "on" : ""} onClick={() => setGender("h")}>Hombre</button>
+          <button className={gender === "m" ? "on" : ""} aria-pressed={gender === "m"} onClick={() => setGender("m")}>Mujer</button>
+          <button className={gender === "h" ? "on" : ""} aria-pressed={gender === "h"} onClick={() => setGender("h")}>Hombre</button>
         </div>
         <small>Si falta el video de hombre, se usa el de mujer.</small>
       </div>
       <div className="field">
         Posición del panel
         <div className="seg">
-          <button className={side === "left" ? "on" : ""} onClick={() => setSide("left")}>Izquierda</button>
-          <button className={side === "right" ? "on" : ""} onClick={() => setSide("right")}>Derecha</button>
+          <button className={side === "left" ? "on" : ""} aria-pressed={side === "left"} onClick={() => setSide("left")}>Izquierda</button>
+          <button className={side === "right" ? "on" : ""} aria-pressed={side === "right"} onClick={() => setSide("right")}>Derecha</button>
         </div>
       </div>
       {pairing}
@@ -203,13 +205,13 @@ function TabletPairing({ code, onNewCode }: { code: string; onNewCode: () => voi
 
   return (
     <div className="pairing">
-      <strong>📡 Conectar la tablet</strong>
+      <strong><Icon name="wifi_tethering" /> Conectar la tablet</strong>
       <div className="pairing-row">
         {qr && <img className="pairing-qr" src={qr} alt="Código QR para abrir la tablet" />}
         <div className="pairing-code">
           <small>Código de sesión</small>
           <b>{code}</b>
-          <button className="btn ghost sm" onClick={onNewCode} title="Desconecta las tablets actuales">↻ Nueva sesión</button>
+          <button className="btn ghost sm" onClick={onNewCode} title="Desconecta las tablets actuales"><Icon name="autorenew" /> Nueva sesión</button>
         </div>
       </div>
       <span>
