@@ -17,6 +17,34 @@
   - Para las intenciones (*cita*, *cancelar*, *facturar*) **no existe ningún dataset**, y hoy hay 1 sola toma por intención.
   - Lo que se construye para los números (cámara → puntos → normalización → segmentación → clasificador → evento → panel) **se reutiliza tal cual** para intenciones y sí/no en las fases siguientes.
 
+## Estado de la implementación (3-oct-2026, rama `reconocimiento-lsc`)
+
+| Pieza | Estado | Dónde |
+|---|---|---|
+| MediaPipe 0.10.35 (manos + cuerpo), GPU con respaldo a CPU, fotograma reducido a 640 px | ✅ | `app/src/vision/tracker.ts`, `scripts/prepare-vision.mjs` |
+| Características de la mano, segmentación, números 1–9 (forma + flexión), k vecinos con plantillas | ✅ | `app/src/vision/features.ts`, `segmenter.ts`, `numbers.ts`, `knn.ts` |
+| Sí/no con la cabeza (asentir/negar) | ✅ en el motor, en la captura y en `?lab`; **no** está en el flujo de atención (no hay paso que lo pida) | `app/src/vision/head.ts` |
+| Seña del número en las infografías, con confirmación del funcionario | ✅ **apagada por defecto** (ver nota) | `session.ts`, `StepControls.tsx`, `tablet/SignPanel.tsx` |
+| Página de captura y validación `/?captura`, envío por correo | ✅ | `app/src/capture/` |
+| Laboratorio de diagnóstico `/?lab` (fps, GPU/CPU, dedos, resultados; `&src=videos/x.mp4` analiza un video) | ✅ (reemplaza la vista `?tablet&debug` del paso 1) | `app/src/vision/VisionLab.tsx` |
+| `npm run dataset` (valida paquetes, informe, plantillas) y `npm test` (15 pruebas con manos sintéticas) | ✅ | `scripts/dataset.ts`, `app/test/` |
+| Intención del trámite (paso `detect`) | ⏳ sigue simulada: no hay datos. La página de captura ya graba las 3 intenciones | — |
+| Variantes manuales de sí/no, Web Worker, modo sin conexión con service worker, modelo ONNX | ⏳ fases siguientes | — |
+
+> **Nota (Ajustes1, 28-sep):** el dueño pidió que en las elecciones (especialidades, citas, horarios) el señante **solo toque** y que no se muestre la cámara. Por eso la seña del número queda como preferencia del panel ("Solo toque" / "Toque o seña del número"), **apagada por defecto**. Hay que decidir con el dueño si se activa.
+
+**Verificado:**
+- `npm test` pasa.
+- El build de producción pasa; MediaPipe queda en un chunk aparte que solo carga la tablet.
+- Con los videos de la intérprete: se detectan manos y cuerpo; el índice sostenido se reconoce como 1 (87 %) y el gesto de "negación" como 2 (75 %). Esto muestra que **cualquier forma sostenida puede disparar un número**, y por eso el funcionario siempre confirma.
+- Flujo panel ↔ tablet: una seña con baja confianza queda como sugerencia, una con alta confianza marca la opción, y una seña de otro paso se descarta.
+
+**No verificado:**
+- Los fps reales en el iPad o en la tablet Android: el navegador de pruebas limita la página a 1 fps.
+- Las señas de personas reales: todavía no hay datos.
+
+Medido en un Mac: manos + cuerpo ≈ 32 ms por fotograma con GPU y ≈ 50 ms con CPU a 640 px.
+
 ## 1. Compatibilidad con el stack actual (verificada)
 
 | Pieza | Stack actual | Decisión | Compatible |
@@ -99,7 +127,7 @@ Tablet                                                          PC funcionario
 
 | Fuente | Uso | Licencia |
 |---|---|---|
-| **Capturas propias** con el modo de captura (§5, paso 4): ≥ 10 señantes × 5 tomas × 9 números, más ejemplos de "nada/otro" | Plantillas y evaluación | Consentimiento propio (§7) |
+| **Capturas propias** con la página `/?captura` (§5b): ≥ 10 señantes × 5 tomas × 9 números, más ejemplos de "nada/otro" | Plantillas y evaluación | Consentimiento en la propia página (§5b, §7). Se guardan fuera del repo público |
 | **LSC70**: números 0–10, 70 personas, secuencias de 6 fotos | Plantillas de forma y validación inicial | **CC BY 4.0** (verificado en Mendeley); hay que citarlo |
 | LSC-54: números 1–10 en puntos 3D | Solo validación e investigación | CC BY-NC, ⚠️ no comercial |
 | Diccionario INSOR | Referencia para los señantes voluntarios | Sin licencia abierta: no usarlo como datos de entrenamiento sin permiso escrito |
@@ -124,10 +152,9 @@ Cada paso se puede entregar y probar por separado.
    - `numbers.ts`: k vecinos sobre la forma (base 1–5) + detector de flexión (+5).
    - Devuelve el número, la confianza y las alternativas.
    - Se restringe a `1..max`.
-4. **Modo de captura de datos** (≈ 2 días)
-   - En el panel, ⚙ → *Captura de datos*: el funcionario elige la etiqueta (p. ej. "7"), la tablet graba la ventana segmentada y envía los puntos.
-   - El panel acumula las muestras y exporta un `.json`.
-   - Así se graba en el mostrador real, con la misma cámara, luz y ángulo, sin manipular video.
+4. **Página de grabación y validación para señantes** (≈ 3 días; detalle en §5b)
+   - Página propia `/?captura` que el señante usa solo, en la tablet o en su celular.
+   - Entrega del paquete por correo.
    - Una página de laboratorio, solo en desarrollo, procesa las imágenes de LSC70 con `HandLandmarker` en modo IMAGE y produce plantillas en el mismo formato. Todo queda en TypeScript, sin Python en esta fase.
 5. **Integración con el flujo** (≈ 1–2 días)
    - Ampliar los tipos (`recognize`, evento `sign`), `buildTabletState`, `selectBySign` en `session.ts` y `PickControls`, para mostrar el resultado real y el interruptor de simulación.
@@ -144,6 +171,71 @@ Cada paso se puede entregar y probar por separado.
 
 **Total aproximado: 2 semanas**, más el tiempo de grabación con señantes, que va en paralelo desde el día 1.
 
+**Orden recomendado:** hacer el paso 4 justo después del paso 1. Así los señantes empiezan a grabar mientras se construyen los pasos 2 y 3, y el clasificador se ajusta con datos reales desde el principio.
+
+## 5b. Página de grabación y validación (`/?captura`)
+
+Página independiente del flujo de atención. No necesita sesión ni panel del funcionario. Funciona en la tablet del mostrador o en el celular del señante, porque comparte el despliegue actual en `inlscasiste.store/?captura`.
+
+### Pantallas
+
+1. **Bienvenida y consentimiento en LSC**
+   - Video del intérprete con el texto debajo: para qué se usan los datos, que **no se graba video, solo puntos de las manos y la cara**, que es voluntario, cuánto tiempo se guardan y cómo pedir que se borren.
+   - Casillas separadas para "usar para entrenar" y "usar para evaluar".
+   - Sin aceptar no se puede seguir.
+2. **Perfil anónimo**
+   - Se genera un código de señante (p. ej. `S-7KQ2`). **No se pide el nombre.**
+   - Preguntas opcionales: sordo/oyente/intérprete, mano dominante, rango de edad, región donde aprendió LSC.
+   - Sirven para medir si el modelo funciona igual para todos.
+3. **Grabación guiada por tareas**
+   - Una lista de señas por grabar, p. ej. los números 1–9 × 5 tomas, más "nada/otro" y, en fases siguientes, sí/no y los trámites.
+   - Para cada seña: video o foto de referencia, cuenta regresiva y grabación con el segmentador. La grabación se corta sola al volver al reposo.
+   - **Repetición inmediata del esqueleto** dibujado: el señante decide *Guardar* o *Repetir*. Así cada toma queda validada por quien la hizo.
+   - Avisos en vivo: "no se ve la mano", "muy oscuro", "acérquese".
+   - Barra de progreso (p. ej. 23/45).
+4. **Validación de vocabulario**
+   - Para cada seña se muestra la descripción de referencia (diccionario INSOR/ICC) y se pregunta: *"¿Así la hace usted?"* → **Sí / Lo hago distinto**.
+   - Si responde *distinto*, se graba su variante con una etiqueta aparte, p. ej. `7-variante`.
+   - Así se detectan variantes regionales antes de entrenar.
+5. **Prueba del reconocedor** (cuando exista el clasificador)
+   - El señante hace un número, la página muestra lo que entendió y el señante marca ✓ o ✗.
+   - Cada intento queda etiquetado y sirve como dato de evaluación real.
+6. **Enviar**: ver la sección siguiente.
+
+**Progreso guardado:** se guarda en `IndexedDB` de la propia tablet. Si se cierra la página o se acaba la batería, se retoma donde iba. Cuando el paquete ya se envió, se borra con un botón.
+
+### Cómo llega el paquete
+
+| Opción | Cómo | Ventajas | Inconvenientes |
+|---|---|---|---|
+| **A. Compartir por correo (recomendada)** | Botón **Enviar**. Con la Web Share API (`navigator.share({ files })`), iPad y Android abren su menú de compartir con el archivo ya adjunto. El señante elige Correo y escribe la dirección del proyecto | Sin servidor, sin claves, sin terceros. Funciona en GitHub Pages y en la red local | El señante hace 2 toques más |
+| A'. Respaldo | Si el navegador no puede compartir archivos, se ofrece **Descargar** + un enlace `mailto:` con asunto y cuerpo prellenados (`mailto:` no puede adjuntar, así que se adjunta a mano) | Funciona en cualquier navegador | Más pasos |
+| B. Subida directa (más adelante, si el volumen crece) | Cloudflare Worker (el DNS ya está en Cloudflare) que recibe el paquete y lo guarda en un bucket R2 **privado**. Tú lo descargas desde el panel de Cloudflare | No depende del correo | Agrega un backend, una clave secreta y un encargado del tratamiento de datos |
+| ✗ Directo al repo | La página no puede escribir en GitHub sin una clave expuesta en el navegador | — | **Descartado:** la clave quedaría pública y el repo es público |
+
+**Archivo enviado:** `inlsc_captura_S-7KQ2_2026-10-15.json.gz`. Contiene versión del formato, consentimiento (casillas y fecha), perfil anónimo, versión de los modelos, y por cada toma: etiqueta, fotogramas y puntos normalizados.
+- Se cuantiza a 3 decimales y se comprime con `CompressionStream("gzip")`, nativo en el navegador.
+- Unas 45 tomas ≈ 1 MB. Cabe en cualquier correo.
+
+**Del correo al proyecto:**
+1. Guardas los `.json.gz` en una carpeta **privada**: un repo privado aparte (p. ej. `inlsc-datos`) o una carpeta de Drive compartida solo con el equipo. **No en este repo**, porque es público.
+2. `npm run dataset -- <carpeta>` valida los paquetes:
+   - formato y consentimiento;
+   - descarta duplicados;
+   - genera `public/vision/numbers.templates.json` (solo plantillas agregadas, sin perfil ni consentimiento) y un informe de cuántas tomas hay por seña, por señante y por mano dominante.
+3. Las plantillas sí se publican con la app: son necesarias para reconocer. Para reducir el riesgo, se publican **solo los puntos de las manos**, sin cara ni cuerpo, y sin código de señante.
+
+### Implementación
+
+- `src/capture/CaptureApp.tsx` + `main.tsx`: nueva ruta `?captura`, junto a la del panel y la de la tablet.
+- Reutiliza `src/vision/*` (pasos 1–2), `LscVideo` para el consentimiento y las referencias, e `Icon`.
+- Lista de tareas en datos: `src/capture/tasks.ts`, con el mismo estilo que `flows.ts`. Agregar señas nuevas no requiere tocar código.
+- Sin dependencias nuevas: `IndexedDB`, `CompressionStream` y Web Share son nativos (Safari ≥ 16.4).
+- **Se necesita de ustedes:**
+  - el texto del consentimiento, revisado por quien maneje habeas data en la IPS;
+  - el **video del consentimiento en LSC**;
+  - la dirección de correo de destino.
+
 ## 6. Fases siguientes (misma infraestructura)
 
 | Fase | Qué | Cómo |
@@ -159,6 +251,7 @@ Cada paso se puede entregar y probar por separado.
   - permisos por separado para entrenar, publicar y mostrar la cara;
   - plazo de conservación y forma de revocar el permiso.
 - Guardar solo puntos de referencia reduce el riesgo, pero no lo elimina. La Circular SIC 002 de 2024 regula la IA con datos personales.
+- **Este repositorio es público** (lo exige GitHub Pages en el plan gratuito). Los paquetes de captura nunca se suben aquí: van a un repo privado o a una carpeta restringida (§5b).
 - **Comunidad sorda:**
   - validar con INSOR o FENASCOL las señas, sobre todo las variantes regionales de los números y, más adelante, *cita* y *cancelar*;
   - pagar a los señantes que participen;

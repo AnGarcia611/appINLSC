@@ -114,3 +114,19 @@ scripts/prepare-videos.mjs   copia y normaliza los videos
 ```
 
 Los trámites se definen como datos en `src/shared/flows.ts`, y el nombre de la IPS en `src/shared/config.ts`.
+
+## Reconocimiento de señas LSC (beta)
+
+Ver `../plan_reconocimiento_LSC.md`. Todo corre en el navegador de la tablet con MediaPipe 0.10.35, sin internet. El video nunca sale de la tablet.
+
+- **Seña del número en las infografías:** en el panel, preferencia *Selección en las infografías → Toque o seña del número* (apagada por defecto). La tablet reconoce 1–9 y el funcionario confirma; con confianza < 70 % solo se sugiere.
+- **`/?captura`:** página para que señantes graben y validen señas (consentimiento, perfil anónimo, grabación guiada, prueba del reconocedor). El paquete (solo puntos, sin video) se envía por correo a `CAPTURE_EMAIL` (`src/shared/config.ts`): automático con el servicio `../captura-mail` (Cloudflare Worker, `VITE_CAPTURE_URL`), o por el menú Compartir si no está disponible. El consentimiento es un **borrador** (`src/capture/consent.ts`) pendiente de revisión legal.
+- **`/?lab`:** diagnóstico en la tablet real: fps, GPU/CPU, extensión de los dedos y resultados en vivo. `?lab&src=videos/seleccion_m.mp4` analiza un video publicado.
+
+```bash
+npm run vision                      # copia el wasm de MediaPipe a public/vision (también corre solo antes de dev/build/start)
+npm test                            # pruebas del motor con manos sintéticas
+npm run dataset -- ~/inlsc-datos    # valida los paquetes recibidos, imprime un informe y genera public/vision/numbers.templates.json
+```
+
+> ⚠️ Guarde los paquetes recibidos **fuera de este repositorio** (es público). `npm run dataset` se niega a leer carpetas dentro del repo.

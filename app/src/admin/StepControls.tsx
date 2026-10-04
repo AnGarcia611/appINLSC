@@ -1,13 +1,13 @@
 import { useState } from "react"
 import { MOCK_CITAS, formatCOP, formatDate, formatTime } from "../shared/catalog"
 import { PATHS } from "../shared/flows"
-import { citaOptions, currentStep, stepsOf, type Session, type SessionActions } from "./session"
+import { SIGN_ACCEPT, citaOptions, currentStep, stepsOf, type Session, type SessionActions } from "./session"
 import { AmountInput, SlotPicker, SpecialtyPicker } from "./pickers"
 import Icon from "../shared/Icon"
 import { ConfidenceBar, Msg } from "./widgets"
 
 /** Controles del funcionario para el paso actual del trámite. */
-export default function StepControls({ session: s, actions: a }: { session: Session; actions: SessionActions }) {
+export default function StepControls({ session: s, actions: a, signNumbers = false }: { session: Session; actions: SessionActions; signNumbers?: boolean }) {
   const step = currentStep(s)
   const color = s.path?.color ?? "var(--blue)"
   const tag = `INLSC · PASO ${s.index + 1} DE ${stepsOf(s).length}${s.path ? "" : "+"} · ${step.label.toUpperCase()}`
@@ -30,7 +30,7 @@ export default function StepControls({ session: s, actions: a }: { session: Sess
         <>
           <Msg tag={tag}>{s.specialties ? "Infografía enviada. Esperando la selección del señante." : step.hint}</Msg>
           {s.specialties
-            ? <PickControls s={s} a={a} labels={s.specialties.map((o) => `${o.tab} · ${o.text}`)} onEdit={() => a.sendSpecialties(null)} />
+            ? <PickControls s={s} a={a} signNumbers={signNumbers} labels={s.specialties.map((o) => `${o.tab} · ${o.text}`)} onEdit={() => a.sendSpecialties(null)} />
             : <SpecialtyPicker onSend={a.sendSpecialties} />}
         </>
       )
@@ -40,7 +40,7 @@ export default function StepControls({ session: s, actions: a }: { session: Sess
         <>
           <Msg tag={tag}>{s.citasSent ? "Citas enviadas. Esperando la selección del señante." : step.hint}</Msg>
           {s.citasSent
-            ? <PickControls s={s} a={a} labels={citaOptions().map((o) => `${o.tab} · ${o.text}`)} onEdit={() => a.sendCitas(false)} />
+            ? <PickControls s={s} a={a} signNumbers={signNumbers} labels={citaOptions().map((o) => `${o.tab} · ${o.text}`)} onEdit={() => a.sendCitas(false)} />
             : (
               <div className="picker">
                 <ol className="picker-chosen">
@@ -66,7 +66,7 @@ export default function StepControls({ session: s, actions: a }: { session: Sess
         <>
           <Msg tag={tag}>{s.slots ? "Horarios enviados. Esperando la selección del señante." : step.hint}</Msg>
           {s.slots
-            ? <PickControls s={s} a={a} labels={s.slots.map((x) => `${formatDate(x.date)} · ${formatTime(x.time)}`)} onEdit={() => a.sendSlots(null)} />
+            ? <PickControls s={s} a={a} signNumbers={signNumbers} labels={s.slots.map((x) => `${formatDate(x.date)} · ${formatTime(x.time)}`)} onEdit={() => a.sendSlots(null)} />
             : <SlotPicker onSend={a.sendSlots} onNone={() => a.setNoAvailability(true)} />}
         </>
       )
@@ -138,9 +138,13 @@ function DetectControls({ s, a, tag }: { s: Session; a: SessionActions; tag: str
   )
 }
 
-/** Espera el toque del señante en la tablet y deja confirmar la opción elegida. */
-function PickControls({ s, a, labels, onEdit }: { s: Session; a: SessionActions; labels: string[]; onEdit: () => void }) {
+/** Espera la elección del señante (toque o seña del número) y deja confirmar la opción. */
+function PickControls({ s, a, labels, onEdit, signNumbers }: { s: Session; a: SessionActions; labels: string[]; onEdit: () => void; signNumbers: boolean }) {
   const selected = s.pick
+  const sign = s.sign
+  const bySign = s.pickBy === "seña" && sign !== null
+  // Seña con poca confianza: no marca la opción; el funcionario la acepta o pide repetir.
+  const doubtful = sign !== null && sign.confidence < SIGN_ACCEPT && !bySign
 
   return (
     <>
@@ -149,15 +153,32 @@ function PickControls({ s, a, labels, onEdit }: { s: Session; a: SessionActions;
           <span className="picked-num">{selected + 1}</span>
           <div>
             <strong>{labels[selected]}</strong>
-            <em>Seleccionado en la pantalla táctil</em>
+            <em>{bySign ? `Seña del número reconocida · ${sign.confidence} %` : s.pickBy === "funcionario" ? "Elegida por el funcionario a partir de la seña" : "Seleccionado en la pantalla táctil"}</em>
           </div>
         </div>
-      ) : <p className="waiting"><Icon name="hourglass_top" /> Esperando que el señante toque una opción en la tablet…</p>}
+      ) : (
+        <p className="waiting"><Icon name="hourglass_top" /> {signNumbers ? "Esperando que el señante toque una opción o haga la seña del número…" : "Esperando que el señante toque una opción en la tablet…"}</p>
+      )}
+
+      {bySign && <ConfidenceBar value={sign.confidence} animating={false} label="Precisión de la seña del número" />}
+
+      {doubtful && (
+        <Msg tag="VALIDACIÓN REQUERIDA" tone="warn">
+          Posible seña del número <b>{sign.value}</b> ({sign.confidence} %). Confirme con el señante antes de usarla.
+          <span className="row">
+            <button className="btn ghost sm" onClick={() => a.acceptSign(sign.value)}>Usar opción {sign.value}</button>
+            {sign.alternatives.slice(0, 2).map((alt) => (
+              <button key={alt.value} className="btn ghost sm" onClick={() => a.acceptSign(alt.value)}>Opción {alt.value}</button>
+            ))}
+          </span>
+        </Msg>
+      )}
 
       <button className="btn primary" disabled={selected === null} onClick={a.confirmPick}>
         {selected === null ? "Confirmar opción" : `Confirmar opción ${selected + 1}`} <Icon name="arrow_forward" />
       </button>
       <div className="row">
+        {(selected !== null || sign) && <button className="btn ghost sm" onClick={a.clearPick}><Icon name="restart_alt" /> Volver a captar</button>}
         <button className="btn ghost sm" onClick={onEdit}><Icon name="edit" /> Editar opciones</button>
       </div>
     </>
