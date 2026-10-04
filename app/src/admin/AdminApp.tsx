@@ -23,6 +23,10 @@ function useStored<T extends string>(key: string, initial: T) {
 export default function AdminApp() {
   const [gender, setGender] = useStored<Gender>("inlsc.gender", "m")
   const [side, setSide] = useStored<Side>("inlsc.side", "right")
+  // Reconocimiento de la seña del número en las infografías (además del toque). Beta: el funcionario siempre confirma.
+  // Apagado por defecto: en Ajustes1 (28-sep) se pidió que en las elecciones el señante solo toque, sin cámara.
+  const [signPref, setSignPref] = useStored<"on" | "off">("inlsc.signNumbers", "off")
+  const signNumbers = signPref === "on"
   const [open, setOpen] = useState(false)
   const [manifest, setManifest] = useState<VideoManifest>({})
   // Código de la sesión de emparejamiento. Se conserva al recargar para que la tablet se reconecte sola.
@@ -32,11 +36,14 @@ export default function AdminApp() {
   useEffect(() => { loadManifest().then(setManifest) }, [])
   useEffect(() => { if (!code) setCode(newSessionCode()) }, [code]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const sync = useAdminSync(code || null, (event) => { if (event.type === "select") actions.selectByTouch(event.index) })
+  const sync = useAdminSync(code || null, (event) => {
+    if (event.type === "select") actions.selectByTouch(event.index)
+    else if (event.type === "sign") actions.selectBySign(event)
+  })
   // Sin tablet conectada no se puede iniciar ni avanzar; una atención en curso queda en pausa.
   const tablet = sync.tablet
 
-  const tabletState = useMemo(() => buildTabletState(session, gender, manifest), [session, gender, manifest])
+  const tabletState = useMemo(() => buildTabletState(session, gender, manifest, signNumbers), [session, gender, manifest, signNumbers])
   const serialized = JSON.stringify(tabletState)
   // `tablet` en las dependencias: al (re)conectarse la tablet se vuelve a publicar el estado actual.
   useEffect(() => { sync.send(tabletState) }, [serialized, tablet, sync.online]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -97,7 +104,7 @@ export default function AdminApp() {
             <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Minimizar panel"><Icon name="remove" /></button>
           </header>
 
-          <div className="demo-badge">MODO DEMO · reconocimiento de señas simulado</div>
+          <div className="demo-badge">{signNumbers ? "MODO DEMO · trámite simulado · seña del número real (beta)" : "MODO DEMO · reconocimiento de señas simulado"}</div>
 
           {connection}
 
@@ -121,14 +128,14 @@ export default function AdminApp() {
                 )}
                 {/* fieldset deshabilitado: bloquea todos los botones y campos del paso mientras no hay tablet */}
                 <fieldset className="controls-lock" disabled={!tablet}>
-                  <StepControls session={session} actions={actions} />
+                  <StepControls session={session} actions={actions} signNumbers={signNumbers} />
                 </fieldset>
               </>
             ) : (
               <div className="dock-idle">
                 {session.finished && <div className="done-card"><span><Icon name="check" /></span><strong>Trámite completado</strong></div>}
                 {/* Preferencias a la vista (sin ⚙) mientras no hay atención; al iniciarla desaparecen. */}
-                <Preferences gender={gender} setGender={setGender} side={side} setSide={setSide} />
+                <Preferences gender={gender} setGender={setGender} side={side} setSide={setSide} signNumbers={signNumbers} setSignNumbers={(on) => setSignPref(on ? "on" : "off")} />
                 {tablet && (
                   <div className="session-line">
                     <span><Icon name="check_circle" fill /> Tablet conectada · Sesión {code}</span>
@@ -199,7 +206,10 @@ function GenderSwitch({ gender, setGender, small }: { gender: Gender; setGender:
   )
 }
 
-function Preferences({ gender, setGender, side, setSide }: { gender: Gender; setGender: (g: Gender) => void; side: Side; setSide: (s: Side) => void }) {
+function Preferences({ gender, setGender, side, setSide, signNumbers, setSignNumbers }: {
+  gender: Gender; setGender: (g: Gender) => void; side: Side; setSide: (s: Side) => void
+  signNumbers: boolean; setSignNumbers: (on: boolean) => void
+}) {
   return (
     <div className="prefs">
       <div className="field">
@@ -213,6 +223,14 @@ function Preferences({ gender, setGender, side, setSide }: { gender: Gender; set
           <button className={side === "left" ? "on" : ""} aria-pressed={side === "left"} onClick={() => setSide("left")}>Izquierda</button>
           <button className={side === "right" ? "on" : ""} aria-pressed={side === "right"} onClick={() => setSide("right")}>Derecha</button>
         </div>
+      </div>
+      <div className="field">
+        Selección en las infografías
+        <div className="seg" role="group" aria-label="Selección en las infografías">
+          <button className={!signNumbers ? "on" : ""} aria-pressed={!signNumbers} onClick={() => setSignNumbers(false)}>Solo toque</button>
+          <button className={signNumbers ? "on" : ""} aria-pressed={signNumbers} onClick={() => setSignNumbers(true)}>Toque o seña del número</button>
+        </div>
+        <small>La seña del número se reconoce en la tablet (beta). Usted siempre confirma la opción.</small>
       </div>
     </div>
   )
@@ -253,6 +271,9 @@ function TabletPairing({ code, onNewCode }: { code: string; onNewCode: () => voi
         {SYNC_MODE === "local" ? " (misma red WiFi):" : " (requiere internet):"}
       </span>
       {urls.map((u) => <code key={u}>{u}</code>)}
+      {urls.some((u) => u.startsWith("http://")) && (
+        <span className="pairing-warn"><Icon name="warning" fill /> Este servidor no usa HTTPS: la tablet podrá conectarse, pero su cámara quedará bloqueada. Inicie el servidor con HTTPS (npm run dev, sin INLSC_HTTP=1).</span>
+      )}
     </div>
   )
 }

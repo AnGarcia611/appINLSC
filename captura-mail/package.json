@@ -1,0 +1,16 @@
+{
+  "name": "inlsc-captura-mail",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Recibe los paquetes de /?captura y los reenvía por correo (Cloudflare Worker + Email Routing).",
+  "scripts": {
+    "dev": "wrangler dev",
+    "check": "wrangler deploy --dry-run --outdir dist",
+    "deploy": "wrangler deploy",
+    "test": "node --test test/*.test.ts"
+  },
+  "devDependencies": {
+    "wrangler": "^4.147.0"
+  }
+}

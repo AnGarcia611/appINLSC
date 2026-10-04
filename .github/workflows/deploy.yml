@@ -30,11 +30,17 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci
+      # Pruebas del motor de reconocimiento de señas (manos sintéticas, sin cámara).
+      - run: npm test
       # Verifica que la tablet puede conectarse por el relé antes de publicar.
-      - run: npm run test:sync
+      # Usa servidores MQTT públicos: si uno tarda en responder, se reintenta una vez antes de dar el despliegue por fallido.
+      - run: npm run test:sync || (sleep 20 && npm run test:sync)
+      # prebuild copia el wasm de MediaPipe a public/vision (los modelos .task están versionados).
       - run: npm run build
         env:
           VITE_SYNC: relay
+          # Envío automático de la página de captura (captura-mail/). Si el servicio no responde, la página ofrece el envío manual.
+          VITE_CAPTURE_URL: https://captura.inlscasiste.store/captura
           # Dominio propio (inlscasiste.store): la app se sirve desde la raíz.
           BASE_PATH: /
       - uses: actions/upload-pages-artifact@v3

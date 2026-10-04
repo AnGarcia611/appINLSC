@@ -1,0 +1,29 @@
+// Servicio que recibe los paquetes de la página de captura (/?captura) y los envía por correo.
+// Despliegue: ver README.md.
+{
+  "name": "inlsc-captura",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  // Dirección fija: Cloudflare crea el registro DNS de captura.inlscasiste.store al desplegar.
+  "routes": [{ "pattern": "captura.inlscasiste.store", "custom_domain": true }],
+  // Sin la dirección *.workers.dev: solo se llega por el dominio propio.
+  "workers_dev": false,
+  "send_email": [
+    {
+      "name": "EMAIL",
+      // Solo puede escribir a esta dirección (verificada en Email Routing): nadie puede usarlo para enviar correo a terceros.
+      "allowed_destination_addresses": ["afgarciaos@gmail.com"]
+    }
+  ],
+  // Máximo 5 envíos por minuto por IP: evita que llenen el buzón.
+  "ratelimits": [
+    { "name": "LIMITER", "namespace_id": "4170", "simple": { "limit": 5, "period": 60 } }
+  ],
+  "vars": {
+    "DESTINATION": "afgarciaos@gmail.com",
+    // Remitente: cualquier dirección del dominio con Email Routing activo.
+    "SENDER": "captura@inlscasiste.store",
+    // Páginas que pueden enviar (además de https://localhost y https:// con IP de red local, para desarrollo).
+    "ALLOWED_ORIGINS": "https://inlscasiste.store,https://www.inlscasiste.store"
+  }
+}

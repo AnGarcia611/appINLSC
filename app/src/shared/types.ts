@@ -35,10 +35,21 @@ export interface TabletState {
   video?: VideoRef
   progress?: Progress
   camera: boolean
+  /** Qué debe reconocer la tablet con la cámara en este paso (sin campo: nada). */
+  recognize?: Recognize
 }
 
+/** Seña del número de una opción (1..max). */
+export type Recognize = { task: "number"; max: number }
+
+/** Número reconocido con su confianza (0–100). */
+export interface SignGuess { value: number; confidence: number }
+
 /** Lo que la tablet envía al panel del funcionario. */
-export type TabletEvent = { type: "select"; index: number }
+export type TabletEvent =
+  | { type: "select"; index: number }
+  /** Seña reconocida en la tablet. `seq` es el del estado que la pidió: el panel descarta resultados de otro paso. */
+  | { type: "sign"; seq: number; task: "number"; value: number; confidence: number; alternatives: SignGuess[] }
 
 /** Mensajes entre el panel y la tablet (por el servidor local o por WebRTC). */
 export type WireMessage =

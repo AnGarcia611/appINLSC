@@ -1,0 +1,5 @@
+# Paquetes simulados por wrangler dev (contienen datos de captura): nunca al repo.
+.wrangler/
+dist/
+node_modules/
+.dev.vars

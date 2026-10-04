@@ -3,6 +3,9 @@ import { isValidCode, normalizeCode, useTabletSync, type TabletStatus } from "..
 import type { TabletState } from "../shared/types"
 import Icon, { type IconName } from "../shared/Icon"
 import TabletScreen from "./TabletScreen"
+import SignPanel from "./SignPanel"
+import { loadTracker } from "../vision/tracker"
+import { cameraBlockedReason } from "../shared/camera"
 
 const INITIAL: TabletState = { seq: 0, view: { kind: "idle" }, camera: false }
 const CODE_KEY = "inlsc.tabletSession"
@@ -17,7 +20,7 @@ function initialCode(): string | null {
   } catch { return isValidCode(fromUrl) ? fromUrl : null }
 }
 
-/** App de la tablet del señante: recibe el estado del funcionario y reporta selecciones táctiles. */
+/** App de la tablet del señante: recibe el estado del funcionario y reporta selecciones (toque o seña del número). */
 export default function TabletApp() {
   const [code, setCodeState] = useState<string | null>(initialCode)
   const [state, setState] = useState<TabletState>(INITIAL)
@@ -42,12 +45,15 @@ export default function TabletApp() {
     setStarted(true)
     document.documentElement.requestFullscreen?.().catch(() => undefined)
     ;(navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<unknown> } }).wakeLock?.request("screen").catch(() => undefined)
-    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-      setCameraError("La cámara requiere HTTPS")
+    const blocked = cameraBlockedReason()
+    if (blocked) {
+      setCameraError(blocked)
       return
     }
     try {
       setStream(await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 } }, audio: false }))
+      // Precarga los modelos de señas (1–3 s) para que estén listos cuando el funcionario envíe una infografía.
+      loadTracker().catch(() => undefined)
     } catch {
       setCameraError("No se pudo acceder a la cámara")
     }
@@ -63,6 +69,14 @@ export default function TabletApp() {
         cameraError={cameraError}
         status={<ConnectionBadge status={status} code={code} />}
         onSelect={(index) => { if (status === "connected") send({ type: "select", index }) }}
+        sign={state.recognize && stream && (
+          <SignPanel
+            stream={stream}
+            recognize={state.recognize}
+            seq={state.seq}
+            onSign={(r) => { if (status === "connected") send({ type: "sign", seq: state.seq, task: "number", value: r.value, confidence: r.confidence, alternatives: r.alternatives }) }}
+          />
+        )}
       />
       {status !== "connected" && <ConnectionOverlay status={status} code={code} onRetry={retry} onChangeCode={() => setCode(null)} />}
       {!started && (

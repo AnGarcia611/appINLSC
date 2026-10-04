@@ -3,12 +3,18 @@ import { MOCK_CITAS, formatDate, formatTime, specialtyByName } from "../shared/c
 import { SEDE } from "../shared/config"
 import { INTRO, PATHS, type FlowPath, type Step } from "../shared/flows"
 import { pickVideo, type VideoManifest } from "../shared/videos"
-import type { Gender, MenuOption, Notice, Slot, TabletState } from "../shared/types"
+import type { Gender, MenuOption, Notice, Recognize, SignGuess, Slot, TabletEvent, TabletState } from "../shared/types"
 
 export type Cita = (typeof MOCK_CITAS)[number]
 
 /** Aviso que acompaña al video de negación en la tablet. */
 const NO_AVAILABILITY: Notice = { title: "No hay disponibilidad", text: "Intente otro día." }
+
+/** Confianza mínima (%) para que una seña de número marque la opción en la tablet sin intervención del funcionario. */
+export const SIGN_ACCEPT = 70
+
+/** Última seña de número reconocida en la tablet para la infografía actual. */
+export interface SignRead extends SignGuess { alternatives: SignGuess[] }
 
 export interface Session {
   active: boolean
@@ -23,8 +29,12 @@ export interface Session {
   slots: Slot[] | null
   noAvailability: boolean
   amount: number | null
-  /** Opción que el señante tocó en la infografía (null mientras no elige). Solo se elige por toque. */
+  /** Opción elegida en la infografía (null mientras no elige): por toque o por la seña del número. */
   pick: number | null
+  /** Quién eligió la opción actual. */
+  pickBy: "táctil" | "seña" | "funcionario" | null
+  /** Última seña de número reconocida en este paso (aunque no haya marcado la opción por baja confianza). */
+  sign: SignRead | null
   chosen: { specialty?: MenuOption; slot?: Slot; cita?: Cita }
 }
 
@@ -32,7 +42,7 @@ const NEW_SESSION: Session = {
   active: false, finished: false, path: null, index: 0, seq: 0,
   detect: { status: "waiting", intent: 0, confidence: 0 },
   specialties: null, citasSent: false, slots: null, noAvailability: false, amount: null,
-  pick: null, chosen: {},
+  pick: null, pickBy: null, sign: null, chosen: {},
 }
 
 export const stepsOf = (s: Session): Step[] => [...INTRO, ...(s.path?.steps ?? [])]
@@ -71,7 +81,7 @@ export function useSession() {
     update((s) => {
       const last = s.index >= stepsOf(s).length - 1
       if (last) return { ...s, active: false, finished: true }
-      return { ...s, index: s.index + 1, seq: s.seq + 1, pick: null }
+      return { ...s, index: s.index + 1, seq: s.seq + 1, pick: null, pickBy: null, sign: null }
     })
   }
 
@@ -89,11 +99,25 @@ export function useSession() {
   const chooseIntent = (intent: number) => update((s) => ({ ...s, detect: { ...s.detect, intent } }))
   const confirmIntent = () => {
     stepToken.current++
-    update((s) => ({ ...s, path: PATHS[s.detect.intent], index: s.index + 1, seq: s.seq + 1, pick: null }))
+    update((s) => ({ ...s, path: PATHS[s.detect.intent], index: s.index + 1, seq: s.seq + 1, pick: null, pickBy: null, sign: null }))
   }
 
-  // ── Selección en infografías: el señante toca la opción en la tablet (no se usa la seña del número) ──
-  const selectByTouch = (index: number) => update((s) => index < optionCount(s) ? { ...s, pick: index } : s)
+  // ── Selección en infografías: el señante toca la opción o hace la seña del número ──
+  const selectByTouch = (index: number) => update((s) => index < optionCount(s) ? { ...s, pick: index, pickBy: "táctil", sign: null } : s)
+
+  /**
+   * Seña de número reconocida en la tablet. Se descarta si viene de otro paso (seq distinto) o fuera de rango.
+   * Con confianza ≥ SIGN_ACCEPT marca la opción; si no, queda como sugerencia para que el funcionario decida.
+   */
+  const selectBySign = (e: Extract<TabletEvent, { type: "sign" }>) => update((s) => {
+    if (e.seq !== s.seq || e.value < 1 || e.value > optionCount(s)) return s
+    const sign: SignRead = { value: e.value, confidence: e.confidence, alternatives: e.alternatives.filter((a) => a.value <= optionCount(s)) }
+    return e.confidence >= SIGN_ACCEPT ? { ...s, sign, pick: e.value - 1, pickBy: "seña" } : { ...s, sign }
+  })
+  /** El funcionario acepta una sugerencia de baja confianza (o una alternativa). */
+  const acceptSign = (value: number) => update((s) => (value >= 1 && value <= optionCount(s) ? { ...s, pick: value - 1, pickBy: "funcionario" } : s))
+  // seq + 1: la tablet reinicia el reconocimiento y descarta señas en curso.
+  const clearPick = () => update((s) => ({ ...s, pick: null, pickBy: null, sign: null, seq: s.seq + 1 }))
 
   const confirmPick = () => {
     update((s) => {
@@ -114,11 +138,11 @@ export function useSession() {
     actions: {
       start, cancel, replay, advance,
       simulateDetection, retryDetection, chooseIntent, confirmIntent,
-      selectByTouch, confirmPick,
-      sendSpecialties: (options: MenuOption[] | null) => update((s) => ({ ...s, specialties: options, pick: null, seq: s.seq + 1 })),
-      sendCitas: (sent: boolean) => update((s) => ({ ...s, citasSent: sent, pick: null, seq: s.seq + 1 })),
-      sendSlots: (slots: Slot[] | null) => update((s) => ({ ...s, slots, noAvailability: false, pick: null, seq: s.seq + 1 })),
-      setNoAvailability: (value: boolean) => update((s) => ({ ...s, noAvailability: value, slots: null, pick: null, seq: s.seq + 1 })),
+      selectByTouch, selectBySign, acceptSign, clearPick, confirmPick,
+      sendSpecialties: (options: MenuOption[] | null) => update((s) => ({ ...s, specialties: options, pick: null, pickBy: null, sign: null, seq: s.seq + 1 })),
+      sendCitas: (sent: boolean) => update((s) => ({ ...s, citasSent: sent, pick: null, pickBy: null, sign: null, seq: s.seq + 1 })),
+      sendSlots: (slots: Slot[] | null) => update((s) => ({ ...s, slots, noAvailability: false, pick: null, pickBy: null, sign: null, seq: s.seq + 1 })),
+      setNoAvailability: (value: boolean) => update((s) => ({ ...s, noAvailability: value, slots: null, pick: null, pickBy: null, sign: null, seq: s.seq + 1 })),
       sendAmount: (amount: number | null) => update((s) => ({ ...s, amount, seq: s.seq + 1 })),
     },
   }
@@ -126,8 +150,11 @@ export function useSession() {
 
 export type SessionActions = ReturnType<typeof useSession>["actions"]
 
-/** Traduce la sesión del funcionario a lo que debe mostrar la tablet. */
-export function buildTabletState(s: Session, gender: Gender, manifest: VideoManifest): TabletState {
+/**
+ * Traduce la sesión del funcionario a lo que debe mostrar la tablet.
+ * `signNumbers`: en las infografías, además del toque, la tablet reconoce la seña del número de la opción.
+ */
+export function buildTabletState(s: Session, gender: Gender, manifest: VideoManifest, signNumbers = false): TabletState {
   const video = (id: Parameters<typeof pickVideo>[0]) => pickVideo(id, gender, manifest)
 
   if (!s.active) {
@@ -142,6 +169,10 @@ export function buildTabletState(s: Session, gender: Gender, manifest: VideoMani
     progress: { labels: steps.map((x) => x.short), current: s.index, color: s.path?.color ?? "#145da0", title: step.label },
   }
   const selected = s.pick
+  // Infografía con opciones: cámara y reconocimiento del número solo si el funcionario lo tiene activado.
+  const choice = (count: number, instruction: string) => signNumbers
+    ? { camera: true, recognize: { task: "number", max: count } satisfies Recognize, instruction: `${instruction} o haga la seña del número` }
+    : { instruction }
 
   switch (step.kind) {
     case "video":
@@ -155,22 +186,25 @@ export function buildTabletState(s: Session, gender: Gender, manifest: VideoMani
 
     case "especialidad":
       if (!s.specialties) return { ...base, view: { kind: "video" }, video: video("especialidad") }
-      return {
-        ...base, video: video("seleccion"),
-        view: { kind: "menu", title: "Especialidades disponibles", instruction: "Seleccione su cita en la pantalla", options: s.specialties, selected },
+      {
+        const { instruction, ...rec } = choice(s.specialties.length, "Seleccione su cita en la pantalla")
+        return { ...base, ...rec, video: video("seleccion"), view: { kind: "menu", title: "Especialidades disponibles", instruction, options: s.specialties, selected } }
       }
 
     case "cita":
       if (!s.citasSent) return { ...base, view: { kind: "idle", message: "Un momento, estamos consultando sus citas…" } }
-      return {
-        ...base, video: video("seleccion"),
-        view: { kind: "menu", title: "Sus citas registradas", instruction: "Seleccione la cita que desea cancelar", options: citaOptions(), selected },
+      {
+        const { instruction, ...rec } = choice(MOCK_CITAS.length, "Seleccione la cita que desea cancelar")
+        return { ...base, ...rec, video: video("seleccion"), view: { kind: "menu", title: "Sus citas registradas", instruction, options: citaOptions(), selected } }
       }
 
     case "horario":
       if (s.noAvailability) return { ...base, view: { kind: "video", notice: NO_AVAILABILITY }, video: video("negacion") }
       if (!s.slots) return { ...base, view: { kind: "idle", message: "Un momento, estamos consultando la disponibilidad…" } }
-      return { ...base, video: video("seleccion"), view: { kind: "horarios", instruction: "Seleccione horario en la pantalla", slots: s.slots, selected } }
+      {
+        const { instruction, ...rec } = choice(s.slots.length, "Seleccione horario en la pantalla")
+        return { ...base, ...rec, video: video("seleccion"), view: { kind: "horarios", instruction, slots: s.slots, selected } }
+      }
 
     case "valor":
       if (s.amount === null) return { ...base, view: { kind: "idle", message: "Un momento, estamos calculando el valor…" } }

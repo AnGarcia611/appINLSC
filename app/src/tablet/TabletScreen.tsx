@@ -13,13 +13,15 @@ interface Props {
   /** Indicador de conexión (solo en la tablet real). Va en el encabezado para no tapar la barra de progreso. */
   status?: ReactNode
   onSelect?: (index: number) => void
+  /** Reconocimiento de la seña del número (solo en la tablet real, en las infografías). */
+  sign?: ReactNode
 }
 
 /**
  * Pantalla completa del señante. Solo dibuja el estado que publica el funcionario.
  * Se adapta a su propio tamaño (consultas de contenedor en styles.css): tablet horizontal, celular vertical u horizontal.
  */
-export default function TabletScreen({ state, stream, cameraError, preview, status, onSelect }: Props) {
+export default function TabletScreen({ state, stream, cameraError, preview, status, onSelect, sign }: Props) {
   const { view, video, seq } = state
   const select = (i: number) => onSelect?.(i)
 
@@ -88,6 +90,7 @@ export default function TabletScreen({ state, stream, cameraError, preview, stat
             </section>
             <aside className="tab-right">
               <Instruction text={view.instruction} icon="touch_app" />
+              {sign}
               {video && <LscVideo video={video} seq={seq} compact />}
             </aside>
           </div>
@@ -100,6 +103,7 @@ export default function TabletScreen({ state, stream, cameraError, preview, stat
             </section>
             <aside className="tab-right">
               <Instruction text={view.instruction} icon="touch_app" />
+              {sign}
               {video && <LscVideo video={video} seq={seq} compact />}
             </aside>
           </div>
@@ -175,7 +179,7 @@ export function LscVideo({ video, seq, compact, notice }: { video: VideoRef; seq
   )
 }
 
-/** Cámara de la tablet: solo en la detección de la seña (en las elecciones el señante toca la pantalla). */
+/** Cámara de la tablet en la detección del trámite (en las infografías la cámara va en el panel de la seña del número). */
 function Camera({ stream, error, preview }: { stream: MediaStream | null; error?: string | null; preview?: boolean }) {
   const ref = useRef<HTMLVideoElement>(null)
   useEffect(() => { if (ref.current) ref.current.srcObject = stream }, [stream])
