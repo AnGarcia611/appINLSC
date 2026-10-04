@@ -33,7 +33,8 @@ jobs:
       # Pruebas del motor de reconocimiento de señas (manos sintéticas, sin cámara).
       - run: npm test
       # Verifica que la tablet puede conectarse por el relé antes de publicar.
-      - run: npm run test:sync
+      # Usa servidores MQTT públicos: si uno tarda en responder, se reintenta una vez antes de dar el despliegue por fallido.
+      - run: npm run test:sync || (sleep 20 && npm run test:sync)
       # prebuild copia el wasm de MediaPipe a public/vision (los modelos .task están versionados).
       - run: npm run build
         env:
