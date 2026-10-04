@@ -61,9 +61,9 @@ export default function TabletApp() {
         state={state}
         stream={state.camera ? stream : null}
         cameraError={cameraError}
+        status={<ConnectionBadge status={status} code={code} />}
         onSelect={(index) => { if (status === "connected") send({ type: "select", index }) }}
       />
-      <ConnectionBadge status={status} code={code} />
       {status !== "connected" && <ConnectionOverlay status={status} code={code} onRetry={retry} onChangeCode={() => setCode(null)} />}
       {!started && (
         <button className="tablet-start" onClick={start}>
@@ -80,7 +80,7 @@ function ConnectionBadge({ status, code }: { status: TabletStatus; code: string 
   const ok = status === "connected"
   return (
     <div className={`conn-badge ${ok ? "ok" : "off"}`} role="status">
-      <Icon name={ok ? "check_circle" : "link_off"} fill={ok} /> {ok ? "Conectada a recepción" : "Sin conexión"} · {code}
+      <Icon name={ok ? "check_circle" : "link_off"} fill={ok} /><span className="conn-badge-text">{ok ? "Conectada a recepción" : "Sin conexión"} · {code}</span>
     </div>
   )
 }

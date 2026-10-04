@@ -6,7 +6,7 @@ import { loadManifest, type VideoManifest } from "../shared/videos"
 import type { Gender } from "../shared/types"
 import TabletScreen from "../tablet/TabletScreen"
 import StepControls from "./StepControls"
-import { buildTabletState, stepsOf, useSession } from "./session"
+import { buildTabletState, currentStep, stepsOf, useSession, type Session } from "./session"
 import Icon from "../shared/Icon"
 import { ScaledPreview } from "./widgets"
 
@@ -24,7 +24,6 @@ export default function AdminApp() {
   const [gender, setGender] = useStored<Gender>("inlsc.gender", "m")
   const [side, setSide] = useStored<Side>("inlsc.side", "right")
   const [open, setOpen] = useState(false)
-  const [settings, setSettings] = useState(false)
   const [manifest, setManifest] = useState<VideoManifest>({})
   // Código de la sesión de emparejamiento. Se conserva al recargar para que la tablet se reconecte sola.
   const [code, setCode] = useStored<string>("inlsc.session", "")
@@ -42,7 +41,15 @@ export default function AdminApp() {
   // `tablet` en las dependencias: al (re)conectarse la tablet se vuelve a publicar el estado actual.
   useEffect(() => { sync.send(tabletState) }, [serialized, tablet, sync.online]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const pairing = <TabletPairing code={code} onNewCode={() => setCode(newSessionCode())} />
+  const newCode = () => setCode(newSessionCode())
+  const pairing = <TabletPairing code={code} onNewCode={newCode} />
+
+  // La vista previa se aparta mientras se arman especialidades u horarios, para dejarles espacio.
+  // El funcionario puede mostrarla u ocultarla; su elección vale hasta que cambia el paso.
+  const composing = isComposing(session)
+  const previewKey = `${session.index}:${composing}`
+  const [previewToggle, setPreviewToggle] = useState<{ key: string; open: boolean } | null>(null)
+  const previewOpen = previewToggle?.key === previewKey ? previewToggle.open : !composing
 
   const startAttention = () => { setOpen(true); if (!session.active && tablet) actions.start() }
   const connection = <ConnectionAlert online={sync.online} tablet={tablet} paused={session.active} pairing={pairing} />
@@ -66,6 +73,8 @@ export default function AdminApp() {
               <p className="launcher-eyebrow">ATENCIÓN INCLUSIVA</p>
               <h2>¿Necesita ayuda?</h2>
               <p>Inicie una atención administrativa en Lengua de Señas Colombiana.</p>
+              {/* "Iniciar atención" arranca directo desde aquí, así que el intérprete también se elige aquí. */}
+              <div className="launcher-gender"><span>Intérprete</span><GenderSwitch gender={gender} setGender={setGender} small /></div>
               <button className="launcher-start" onClick={startAttention}>{tablet ? "Iniciar atención" : "Conectar tablet"} <Icon name="arrow_forward" /></button>
               <p className={`launcher-note ${tablet ? "ok" : "off"}`}><Icon name={tablet ? "check_circle" : "link_off"} fill={tablet} /> {tablet ? "Tablet conectada" : "Tablet desconectada"} · Sesión {code}</p>
             </>
@@ -85,7 +94,6 @@ export default function AdminApp() {
               <Icon name={tablet ? "check_circle" : sync.online ? "link_off" : "wifi_off"} fill={tablet} />
               {tablet ? "Tablet conectada" : sync.online ? "Sin tablet" : "Sin conexión"}
             </span>
-            <button className="icon-btn" onClick={() => setSettings(!settings)} aria-label="Configuración" aria-expanded={settings}><Icon name="settings" /></button>
             <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Minimizar panel"><Icon name="remove" /></button>
           </header>
 
@@ -93,18 +101,24 @@ export default function AdminApp() {
 
           {connection}
 
-          {settings && <Settings gender={gender} setGender={setGender} side={side} setSide={setSide} pairing={tablet ? pairing : null} />}
-
           <div className="dock-body">
             {session.active ? (
               <>
+                {/* Durante la atención solo se ven el progreso, la pantalla del señante y las indicaciones del paso. */}
                 <AdminSteps labels={stepsOf(session).map((s) => s.label)} current={session.index} color={session.path?.color} />
-                <p className="label">PANTALLA DEL SEÑANTE</p>
-                <div className="preview-frame">
-                  <ScaledPreview width={1180} height={820}>
-                    <TabletScreen state={tabletState} stream={null} preview />
-                  </ScaledPreview>
+                <div className="label-row">
+                  <p className="label">PANTALLA DEL SEÑANTE</p>
+                  <button className="link-btn" aria-expanded={previewOpen} onClick={() => setPreviewToggle({ key: previewKey, open: !previewOpen })}>
+                    <Icon name={previewOpen ? "visibility_off" : "visibility"} /> {previewOpen ? "Ocultar" : "Mostrar"}
+                  </button>
                 </div>
+                {previewOpen && (
+                  <div className="preview-frame">
+                    <ScaledPreview width={1180} height={820}>
+                      <TabletScreen state={tabletState} stream={null} preview />
+                    </ScaledPreview>
+                  </div>
+                )}
                 {/* fieldset deshabilitado: bloquea todos los botones y campos del paso mientras no hay tablet */}
                 <fieldset className="controls-lock" disabled={!tablet}>
                   <StepControls session={session} actions={actions} />
@@ -113,6 +127,14 @@ export default function AdminApp() {
             ) : (
               <div className="dock-idle">
                 {session.finished && <div className="done-card"><span><Icon name="check" /></span><strong>Trámite completado</strong></div>}
+                {/* Preferencias a la vista (sin ⚙) mientras no hay atención; al iniciarla desaparecen. */}
+                <Preferences gender={gender} setGender={setGender} side={side} setSide={setSide} />
+                {tablet && (
+                  <div className="session-line">
+                    <span><Icon name="check_circle" fill /> Tablet conectada · Sesión {code}</span>
+                    <button className="btn ghost sm" onClick={newCode} title="Desconecta la tablet actual y genera otro código"><Icon name="autorenew" /> Nueva sesión</button>
+                  </div>
+                )}
                 <button className="btn primary" onClick={actions.start} disabled={!tablet} title={tablet ? undefined : "Conecte la tablet para iniciar"}>{session.finished ? "Nueva atención" : "Iniciar atención"} <Icon name="arrow_forward" /></button>
               </div>
             )}
@@ -161,25 +183,37 @@ function AdminSteps({ labels, current, color = "var(--blue)" }: { labels: string
   )
 }
 
-function Settings({ gender, setGender, side, setSide, pairing }: { gender: Gender; setGender: (g: Gender) => void; side: Side; setSide: (s: Side) => void; pairing: React.ReactNode }) {
+/** Pasos en los que el funcionario arma la infografía (especialidades u horarios) antes de enviarla. */
+function isComposing(s: Session) {
+  if (!s.active) return false
+  const kind = currentStep(s).kind
+  return (kind === "especialidad" && !s.specialties) || (kind === "horario" && !s.slots && !s.noAvailability)
+}
+
+function GenderSwitch({ gender, setGender, small }: { gender: Gender; setGender: (g: Gender) => void; small?: boolean }) {
   return (
-    <div className="settings">
+    <div className={`seg ${small ? "sm" : ""}`} role="group" aria-label="Intérprete de los videos">
+      <button className={gender === "m" ? "on" : ""} aria-pressed={gender === "m"} onClick={() => setGender("m")}>Mujer</button>
+      <button className={gender === "h" ? "on" : ""} aria-pressed={gender === "h"} onClick={() => setGender("h")}>Hombre</button>
+    </div>
+  )
+}
+
+function Preferences({ gender, setGender, side, setSide }: { gender: Gender; setGender: (g: Gender) => void; side: Side; setSide: (s: Side) => void }) {
+  return (
+    <div className="prefs">
       <div className="field">
         Intérprete de los videos (según perfil del funcionario)
-        <div className="seg">
-          <button className={gender === "m" ? "on" : ""} aria-pressed={gender === "m"} onClick={() => setGender("m")}>Mujer</button>
-          <button className={gender === "h" ? "on" : ""} aria-pressed={gender === "h"} onClick={() => setGender("h")}>Hombre</button>
-        </div>
+        <GenderSwitch gender={gender} setGender={setGender} />
         <small>Si falta el video de hombre, se usa el de mujer.</small>
       </div>
       <div className="field">
         Posición del panel
-        <div className="seg">
+        <div className="seg" role="group" aria-label="Posición del panel">
           <button className={side === "left" ? "on" : ""} aria-pressed={side === "left"} onClick={() => setSide("left")}>Izquierda</button>
           <button className={side === "right" ? "on" : ""} aria-pressed={side === "right"} onClick={() => setSide("right")}>Derecha</button>
         </div>
       </div>
-      {pairing}
     </div>
   )
 }
@@ -230,7 +264,7 @@ function PortalBackground() {
       <div className="portal-hero">
         <p>{IPS_NAME.toUpperCase()} · {SEDE.toUpperCase()}</p>
         <h1>Calidad e innovación<br />para mejorar tu salud.</h1>
-        <div className="portal-links"><span>Solicite o consulte sus citas</span><span>Información de servicios</span><span>Canales de atención</span></div>
+        <div className="portal-links"><span>Portal de gestión de citas</span><span>Información de servicios</span><span>Canales de atención</span></div>
       </div>
     </div>
   )

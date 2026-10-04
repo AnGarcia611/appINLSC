@@ -3,12 +3,12 @@ import { MOCK_CITAS, formatDate, formatTime, specialtyByName } from "../shared/c
 import { SEDE } from "../shared/config"
 import { INTRO, PATHS, type FlowPath, type Step } from "../shared/flows"
 import { pickVideo, type VideoManifest } from "../shared/videos"
-import type { Gender, MenuOption, Slot, TabletState } from "../shared/types"
+import type { Gender, MenuOption, Notice, Slot, TabletState } from "../shared/types"
 
 export type Cita = (typeof MOCK_CITAS)[number]
 
-/** Selección del señante en una infografía (por toque o por seña simulada). */
-export interface Pick { selected: number | null; source: "táctil" | "seña" | null; confidence: number; analyzing: boolean }
+/** Aviso que acompaña al video de negación en la tablet. */
+const NO_AVAILABILITY: Notice = { title: "No hay disponibilidad", text: "Intente otro día." }
 
 export interface Session {
   active: boolean
@@ -23,17 +23,16 @@ export interface Session {
   slots: Slot[] | null
   noAvailability: boolean
   amount: number | null
-  pick: Pick
+  /** Opción que el señante tocó en la infografía (null mientras no elige). Solo se elige por toque. */
+  pick: number | null
   chosen: { specialty?: MenuOption; slot?: Slot; cita?: Cita }
 }
-
-const EMPTY_PICK: Pick = { selected: null, source: null, confidence: 0, analyzing: false }
 
 const NEW_SESSION: Session = {
   active: false, finished: false, path: null, index: 0, seq: 0,
   detect: { status: "waiting", intent: 0, confidence: 0 },
   specialties: null, citasSent: false, slots: null, noAvailability: false, amount: null,
-  pick: EMPTY_PICK, chosen: {},
+  pick: null, chosen: {},
 }
 
 export const stepsOf = (s: Session): Step[] => [...INTRO, ...(s.path?.steps ?? [])]
@@ -72,7 +71,7 @@ export function useSession() {
     update((s) => {
       const last = s.index >= stepsOf(s).length - 1
       if (last) return { ...s, active: false, finished: true }
-      return { ...s, index: s.index + 1, seq: s.seq + 1, pick: EMPTY_PICK }
+      return { ...s, index: s.index + 1, seq: s.seq + 1, pick: null }
     })
   }
 
@@ -90,25 +89,15 @@ export function useSession() {
   const chooseIntent = (intent: number) => update((s) => ({ ...s, detect: { ...s.detect, intent } }))
   const confirmIntent = () => {
     stepToken.current++
-    update((s) => ({ ...s, path: PATHS[s.detect.intent], index: s.index + 1, seq: s.seq + 1, pick: EMPTY_PICK }))
+    update((s) => ({ ...s, path: PATHS[s.detect.intent], index: s.index + 1, seq: s.seq + 1, pick: null }))
   }
 
-  // ── Selección en infografías ──
-  const selectByTouch = (index: number) => update((s) =>
-    index < optionCount(s) && !s.pick.analyzing ? { ...s, pick: { selected: index, source: "táctil", confidence: 100, analyzing: false } } : s)
-
-  const simulateNumberSign = (index: number) => {
-    const token = ++stepToken.current
-    update((s) => ({ ...s, pick: { selected: null, source: "seña", confidence: random(89, 97), analyzing: true } }))
-    setTimeout(() => {
-      if (token !== stepToken.current) return
-      update((s) => ({ ...s, pick: { ...s.pick, selected: index, analyzing: false } }))
-    }, 1500)
-  }
+  // ── Selección en infografías: el señante toca la opción en la tablet (no se usa la seña del número) ──
+  const selectByTouch = (index: number) => update((s) => index < optionCount(s) ? { ...s, pick: index } : s)
 
   const confirmPick = () => {
     update((s) => {
-      const i = s.pick.selected
+      const i = s.pick
       if (i === null) return s
       const step = currentStep(s)
       const chosen = { ...s.chosen }
@@ -120,18 +109,16 @@ export function useSession() {
     advance()
   }
 
-  const resetPick = () => { stepToken.current++; update((s) => ({ ...s, pick: EMPTY_PICK })) }
-
   return {
     session,
     actions: {
       start, cancel, replay, advance,
       simulateDetection, retryDetection, chooseIntent, confirmIntent,
-      selectByTouch, simulateNumberSign, confirmPick, resetPick,
-      sendSpecialties: (options: MenuOption[] | null) => { resetPick(); update((s) => ({ ...s, specialties: options, seq: s.seq + 1 })) },
-      sendCitas: (sent: boolean) => { resetPick(); update((s) => ({ ...s, citasSent: sent, seq: s.seq + 1 })) },
-      sendSlots: (slots: Slot[] | null) => { resetPick(); update((s) => ({ ...s, slots, noAvailability: false, seq: s.seq + 1 })) },
-      setNoAvailability: (value: boolean) => { resetPick(); update((s) => ({ ...s, noAvailability: value, slots: null, seq: s.seq + 1 })) },
+      selectByTouch, confirmPick,
+      sendSpecialties: (options: MenuOption[] | null) => update((s) => ({ ...s, specialties: options, pick: null, seq: s.seq + 1 })),
+      sendCitas: (sent: boolean) => update((s) => ({ ...s, citasSent: sent, pick: null, seq: s.seq + 1 })),
+      sendSlots: (slots: Slot[] | null) => update((s) => ({ ...s, slots, noAvailability: false, pick: null, seq: s.seq + 1 })),
+      setNoAvailability: (value: boolean) => update((s) => ({ ...s, noAvailability: value, slots: null, pick: null, seq: s.seq + 1 })),
       sendAmount: (amount: number | null) => update((s) => ({ ...s, amount, seq: s.seq + 1 })),
     },
   }
@@ -152,9 +139,9 @@ export function buildTabletState(s: Session, gender: Gender, manifest: VideoMani
   const base = {
     seq: s.seq,
     camera: false,
-    progress: { labels: steps.map((x) => x.short), current: s.index, color: s.path?.color ?? "#145da0" },
+    progress: { labels: steps.map((x) => x.short), current: s.index, color: s.path?.color ?? "#145da0", title: step.label },
   }
-  const selected = s.pick.analyzing ? null : s.pick.selected
+  const selected = s.pick
 
   switch (step.kind) {
     case "video":
@@ -169,21 +156,21 @@ export function buildTabletState(s: Session, gender: Gender, manifest: VideoMani
     case "especialidad":
       if (!s.specialties) return { ...base, view: { kind: "video" }, video: video("especialidad") }
       return {
-        ...base, camera: true, video: video("seleccion"),
+        ...base, video: video("seleccion"),
         view: { kind: "menu", title: "Especialidades disponibles", instruction: "Seleccione su cita en la pantalla", options: s.specialties, selected },
       }
 
     case "cita":
       if (!s.citasSent) return { ...base, view: { kind: "idle", message: "Un momento, estamos consultando sus citas…" } }
       return {
-        ...base, camera: true, video: video("seleccion"),
+        ...base, video: video("seleccion"),
         view: { kind: "menu", title: "Sus citas registradas", instruction: "Seleccione la cita que desea cancelar", options: citaOptions(), selected },
       }
 
     case "horario":
-      if (s.noAvailability) return { ...base, view: { kind: "video" }, video: video("negacion") }
+      if (s.noAvailability) return { ...base, view: { kind: "video", notice: NO_AVAILABILITY }, video: video("negacion") }
       if (!s.slots) return { ...base, view: { kind: "idle", message: "Un momento, estamos consultando la disponibilidad…" } }
-      return { ...base, camera: true, video: video("seleccion"), view: { kind: "horarios", instruction: "Seleccione horario en la pantalla", slots: s.slots, selected } }
+      return { ...base, video: video("seleccion"), view: { kind: "horarios", instruction: "Seleccione horario en la pantalla", slots: s.slots, selected } }
 
     case "valor":
       if (s.amount === null) return { ...base, view: { kind: "idle", message: "Un momento, estamos calculando el valor…" } }

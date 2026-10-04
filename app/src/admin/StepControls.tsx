@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { MOCK_CITAS, formatCOP, formatDate, formatTime } from "../shared/catalog"
 import { PATHS } from "../shared/flows"
-import { citaOptions, currentStep, optionCount, stepsOf, type Session, type SessionActions } from "./session"
+import { citaOptions, currentStep, stepsOf, type Session, type SessionActions } from "./session"
 import { AmountInput, SlotPicker, SpecialtyPicker } from "./pickers"
 import Icon from "../shared/Icon"
 import { ConfidenceBar, Msg } from "./widgets"
@@ -53,11 +53,13 @@ export default function StepControls({ session: s, actions: a }: { session: Sess
       )
 
     case "horario":
+      // Tras la negación la tablet dice "Intente otro día": lo esperado es cerrar la atención.
+      // "Volver a los horarios" queda solo para corregir un clic por error.
       if (s.noAvailability) return (
         <>
-          <Msg tag={tag} tone="warn">Se mostró el video de negación: no hay disponibilidad.</Msg>
-          <button className="btn ghost" onClick={() => a.setNoAvailability(false)}>Ofrecer otros horarios</button>
-          <button className="btn danger-ghost" onClick={a.cancel}>Finalizar atención</button>
+          <Msg tag={tag} tone="warn">La tablet muestra el video de negación con el aviso «No hay disponibilidad. Intente otro día.»</Msg>
+          <button className="btn primary" onClick={a.cancel}>Finalizar atención <Icon name="arrow_forward" /></button>
+          <button className="btn ghost sm" onClick={() => a.setNoAvailability(false)}><Icon name="restart_alt" /> Volver a los horarios</button>
         </>
       )
       return (
@@ -93,9 +95,9 @@ function DetectControls({ s, a, tag }: { s: Session; a: SessionActions; tag: str
     <>
       <Msg tag={tag}>Cámara activa en la tablet. El señante hace la seña de su solicitud.</Msg>
       <div className="demo-box">
-        <div className="demo-title"><Icon name="movie" /> Guion de la demo</div>
+        <div className="demo-title"><Icon name="medical_services" /> Servicios básicos de salud</div>
         <label className="field">
-          Resultado a simular
+          Servicio que solicita el señante
           <select value={scripted} onChange={(e) => setScripted(Number(e.target.value))}>
             {PATHS.map((p, i) => <option key={p.id} value={i}>{p.name}</option>)}
           </select>
@@ -136,38 +138,26 @@ function DetectControls({ s, a, tag }: { s: Session; a: SessionActions; tag: str
   )
 }
 
+/** Espera el toque del señante en la tablet y deja confirmar la opción elegida. */
 function PickControls({ s, a, labels, onEdit }: { s: Session; a: SessionActions; labels: string[]; onEdit: () => void }) {
-  const { selected, source, confidence, analyzing } = s.pick
-  const count = optionCount(s)
+  const selected = s.pick
 
   return (
     <>
-      {analyzing && <ConfidenceBar value={confidence} animating label="Precisión de detección del número" />}
-      {!analyzing && selected !== null && (
+      {selected !== null ? (
         <div className="picked">
           <span className="picked-num">{selected + 1}</span>
           <div>
             <strong>{labels[selected]}</strong>
-            <em>{source === "táctil" ? "Seleccionado en la pantalla táctil" : `Seña de número detectada · ${confidence} %`}</em>
+            <em>Seleccionado en la pantalla táctil</em>
           </div>
         </div>
-      )}
-      {!analyzing && selected === null && <p className="waiting"><Icon name="hourglass_top" /> Esperando selección (toque en la tablet o seña del número)…</p>}
+      ) : <p className="waiting"><Icon name="hourglass_top" /> Esperando que el señante toque una opción en la tablet…</p>}
 
-      <div className="demo-box">
-        <div className="demo-title"><Icon name="movie" /> Simular seña de número</div>
-        <div className="num-row">
-          {Array.from({ length: count }, (_, i) => (
-            <button key={i} className="num" disabled={analyzing} onClick={() => a.simulateNumberSign(i)} aria-label={`Simular seña del número ${i + 1}`}>{i + 1}</button>
-          ))}
-        </div>
-      </div>
-
-      <button className="btn primary" disabled={selected === null || analyzing} onClick={a.confirmPick}>
+      <button className="btn primary" disabled={selected === null} onClick={a.confirmPick}>
         {selected === null ? "Confirmar opción" : `Confirmar opción ${selected + 1}`} <Icon name="arrow_forward" />
       </button>
       <div className="row">
-        {selected !== null && <button className="btn ghost sm" onClick={a.resetPick}><Icon name="restart_alt" /> Recaptar</button>}
         <button className="btn ghost sm" onClick={onEdit}><Icon name="edit" /> Editar opciones</button>
       </div>
     </>
