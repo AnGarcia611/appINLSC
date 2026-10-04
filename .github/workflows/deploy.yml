@@ -35,7 +35,8 @@ jobs:
       - run: npm run build
         env:
           VITE_SYNC: relay
-          BASE_PATH: /${{ github.event.repository.name }}/
+          # Dominio propio (inlscasiste.store): la app se sirve desde la raíz.
+          BASE_PATH: /
       - uses: actions/upload-pages-artifact@v3
         with:
           path: app/dist

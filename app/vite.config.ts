@@ -9,7 +9,7 @@ const PORT = Number(process.env.PORT ?? 5173)
 const useHttps = process.env.INLSC_HTTP !== "1"
 
 export default defineConfig({
-  // En GitHub Pages la app vive en /<repositorio>/; el workflow define BASE_PATH.
+  // Con el dominio propio la app vive en la raíz; BASE_PATH permite servirla bajo un subdirectorio.
   base: process.env.BASE_PATH ?? "/",
   plugins: [react(), ...(useHttps ? [basicSsl()] : []), inlscSync()],
   server: { host: true, port: PORT, strictPort: true },

@@ -35,14 +35,14 @@ El workflow `.github/workflows/deploy.yml` compila y publica la app en cada push
 1. Cree un repositorio en GitHub (p. ej. `appINLSC`) y suba este proyecto (la raíz es la carpeta que contiene `app/`).
 2. En el repositorio: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 3. Haga push a `main` (o ejecute el workflow a mano en la pestaña *Actions*).
-4. La app queda en `https://<usuario>.github.io/<repositorio>/` y la tablet en `https://<usuario>.github.io/<repositorio>/?tablet`.
+4. La app queda en `https://inlscasiste.store/` y la tablet en `https://inlscasiste.store/?tablet` (dominio propio configurado en *Settings → Pages → Custom domain*; DNS en Cloudflare apuntando a GitHub Pages).
 
 Los videos se publican desde `app/public/videos` (se versionan en git; los originales de `Videos_señantes/` están excluidos en `.gitignore`). Si cambia algún video, ejecute `npm run videos` y haga commit de `app/public/videos`.
 
 Para probar en el PC exactamente lo que se publicará:
 
 ```bash
-INLSC_HTTP=1 PORT=5175 BASE_PATH=/appINLSC/ VITE_SYNC=relay npm start   # abrir http://localhost:5175/appINLSC/
+INLSC_HTTP=1 PORT=5175 VITE_SYNC=relay npm start   # abrir http://localhost:5175/
 ```
 
 > ⚠️ Con GitHub gratuito, Pages exige que el repositorio sea **público**: los videos de los intérpretes y el nombre de la IPS (`src/shared/config.ts`) quedarán visibles en internet. Confirme que tiene el consentimiento de los intérpretes y autorización de la IPS antes de publicar.
