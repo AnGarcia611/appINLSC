@@ -23,7 +23,6 @@ body { margin: 0; }
 button { font: inherit; cursor: pointer; color: inherit; }
 button:disabled { cursor: not-allowed; opacity: 0.45; }
 input, select { font: inherit; }
-input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); flex: none; }
 
 /* Iconos Material Symbols: ocupan lo mismo que el emoji que reemplazan y toman el color del texto. */
 .icon { width: 1.2em; height: 1.2em; flex: none; vertical-align: -0.28em; }
@@ -95,13 +94,22 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); f
 .done-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 20px; background: #e6f4ea; border-radius: var(--radius); }
 .done-card span { width: 52px; height: 52px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 26px; display: grid; place-items: center; }
 
-.settings { background: #f8fafc; border-bottom: 1px solid var(--line); padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; }
 .field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
 .field small { font-weight: 400; color: var(--muted); font-size: 13px; }
 .field select { min-height: 40px; padding: 8px; border-radius: 8px; border: 1px solid var(--field-line); background: #fff; }
 .seg { display: flex; border: 1px solid var(--field-line); border-radius: 10px; overflow: hidden; }
 .seg button { flex: 1; min-height: 40px; border: 0; background: #fff; padding: 8px; font-weight: 600; }
 .seg button.on { background: var(--blue); color: #fff; }
+.seg.sm button { min-height: 36px; padding: 6px; font-size: 14px; }
+/* Preferencias a la vista mientras no hay atención (antes estaban detrás de ⚙); al iniciarla desaparecen. */
+.prefs { display: flex; flex-direction: column; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #f8fafc; }
+.session-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 13px; font-weight: 700; color: var(--ok); }
+.session-line > span { display: inline-flex; align-items: center; gap: 4px; }
+.launcher-gender { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.launcher-gender .seg { flex: 1; }
+.label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.link-btn { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; border: 0; border-radius: 8px; background: none; padding: 4px 8px; color: var(--blue); font-size: 13px; font-weight: 700; }
+.link-btn:hover { background: #eef4fb; }
 .pairing { display: flex; flex-direction: column; gap: 6px; font-size: 13px; background: var(--blue-light); padding: 12px; border-radius: 12px; }
 .pairing code { background: #fff; padding: 6px 8px; border-radius: 6px; font-size: 13px; word-break: break-all; user-select: all; }
 .pairing-row { display: flex; align-items: center; gap: 12px; }
@@ -142,8 +150,6 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); f
 
 .demo-box { border: 1px dashed #d8b64a; background: #fffcf2; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 .demo-title { font-size: 12px; font-weight: 700; color: #8a6400; }
-.num-row { display: flex; gap: 6px; flex-wrap: wrap; }
-.num { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--field-line); background: #fff; font-weight: 700; font-size: 16px; }
 
 .conf { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
 .conf-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--muted); }
@@ -170,13 +176,32 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); f
 .picker { display: flex; flex-direction: column; gap: 8px; }
 .picker-row { display: flex; gap: 6px; align-items: center; }
 .picker-row input { flex: 1; min-width: 0; min-height: 40px; padding: 9px 10px; border: 1px solid var(--field-line); border-radius: 9px; }
+.picker-row.fields { align-items: flex-end; }
+.picker-field { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.picker-field input { width: 100%; color: var(--text); }
 .currency { font-weight: 800; font-size: 18px; }
-.picker-list { max-height: 240px; overflow-y: auto; border: 1px solid var(--field-line); border-radius: 10px; }
+/* Sin el bloque de ajustes durante la atención, la lista puede ocupar casi media pantalla. */
+.picker-list { max-height: min(48vh, 440px); overflow-y: auto; border: 1px solid var(--field-line); border-radius: 10px; }
 .picker-group + .picker-group { border-top: 1px solid var(--line); }
 .picker-head { width: 100%; min-height: 44px; display: flex; gap: 8px; align-items: center; border: 0; background: #fff; padding: 9px 10px; font-size: 14px; font-weight: 600; text-align: left; }
 .picker-head em { margin-left: auto; font-style: normal; color: var(--blue); }
-.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
-.picker-item { display: flex; gap: 8px; align-items: center; min-height: 40px; padding: 6px 12px 6px 30px; font-size: 14px; background: #f8fafc; cursor: pointer; }
+.picker-icon { display: grid; color: var(--c); font-size: 18px; }
+.picker-services { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 10px 12px 36px; }
+.picker-empty { margin: 0; padding: 12px; font-size: 14px; color: var(--muted); }
+/* Chips conmutables (servicios y horas frecuentes): área táctil de 36 px y estado marcado con ✓, no solo con color. */
+.chip { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 6px 12px; border: 1px solid var(--field-line); border-radius: 99px; background: #fff; font-size: 13px; font-weight: 600; text-align: left; }
+.chip:hover:not(:disabled) { border-color: var(--c, var(--blue)); }
+.chip.on { border-color: var(--c, var(--blue)); background: color-mix(in srgb, var(--c, var(--blue)) 12%, #fff); box-shadow: inset 0 0 0 1px var(--c, var(--blue)); }
+.quick-times { display: flex; flex-wrap: wrap; gap: 6px; }
+.hint { font-size: 12px; color: var(--muted); }
+.slot-groups { display: flex; flex-direction: column; gap: 6px; }
+.slot-group { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 10px; background: #f4f8fc; font-size: 13px; }
+.slot-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.slot-chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 2px 2px 4px; border: 1px solid var(--line); border-radius: 99px; background: #fff; font-size: 13px; font-weight: 600; }
+.slot-chip b { width: 22px; height: 22px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; font-size: 12px; }
+.slot-chip button { width: 28px; height: 28px; border: 0; border-radius: 50%; background: none; display: grid; place-items: center; color: var(--muted); font-size: 16px; }
+.slot-chip button:hover { background: #e2e8f0; color: var(--err); }
+.slot-chip button .icon { width: 1em; height: 1em; }
 .picker-chosen { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 .picker-chosen li { display: flex; gap: 8px; align-items: center; background: #f4f8fc; border-radius: 8px; padding: 6px 8px; }
 .picker-chosen b { width: 22px; height: 22px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; font-size: 12px; flex: none; }
@@ -192,7 +217,7 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); f
 .tablet-code label { max-width: 480px; }
 .tablet-code input { width: min(100%, 340px); padding: 14px; border: 0; border-radius: 14px; font: 700 40px ui-monospace, Menlo, monospace; letter-spacing: 0.2em; text-align: center; text-transform: uppercase; color: var(--blue-dark); }
 .tablet-code button { min-height: 56px; border: 0; border-radius: 14px; padding: 14px 40px; background: #fff; color: var(--blue-dark); font-weight: 800; }
-.conn-badge { position: fixed; bottom: 12px; left: 12px; z-index: 40; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; padding: 5px 12px; border-radius: 99px; }
+.conn-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; padding: 5px 12px; border-radius: 99px; white-space: nowrap; }
 .conn-badge.ok { color: var(--ok); background: #e6f4ea; }
 .conn-badge.off { color: var(--err); background: #fdecec; }
 .conn-overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px; background: rgba(13, 63, 112, 0.82); backdrop-filter: blur(4px); }
@@ -212,21 +237,27 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); f
 .tablet-start > .icon { width: 96px; height: 96px; }
 .tablet-start strong { font-size: 48px; }
 
-.tab-screen { width: 100%; height: 100%; display: grid; grid-template-rows: auto 1fr auto; background: #fff; overflow: hidden; }
+/* La pantalla del señante es un contenedor de tamaño: se adapta a su propio ancho y alto (tablet horizontal,
+   tablet o celular en vertical, celular en horizontal) y no al de la ventana. Por eso la vista previa del
+   funcionario, que la dibuja a 1180 × 820, siempre se ve igual que la tablet. */
+.tab-screen { container: tab / size; width: 100%; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: #fff; overflow: hidden; }
 .tab-banner { display: flex; align-items: center; gap: 28px; padding: 14px 32px; color: #fff; background: linear-gradient(100deg, #082a55, #0b4a8c 55%, #1569b8); }
-.tab-logo { display: flex; align-items: center; gap: 8px; background: #fff; color: var(--blue); font-weight: 800; font-size: 32px; padding: 8px 18px; border-radius: 12px; }
-.tab-welcome { display: flex; flex-direction: column; line-height: 1.1; border-left: 2px solid rgba(255,255,255,.5); padding-left: 24px; }
+.tab-logo { display: flex; align-items: center; gap: 8px; flex: none; background: #fff; color: var(--blue); font-weight: 800; font-size: 32px; padding: 8px 18px; border-radius: 12px; }
+.tab-welcome { display: flex; flex-direction: column; min-width: 0; line-height: 1.1; border-left: 2px solid rgba(255,255,255,.5); padding-left: 24px; }
 .tab-welcome small { font-size: 20px; }
 .tab-welcome strong { font-size: 32px; }
 .tab-welcome span { font-size: 18px; color: #9fd6ff; }
-.tab-cross { margin-left: auto; font-size: 54px; line-height: 1; color: #5fc8ff; filter: drop-shadow(0 0 12px #5fc8ff); }
+.tab-banner-end { margin-left: auto; display: flex; align-items: center; gap: 18px; flex: none; }
+.tab-cross { display: grid; font-size: 54px; line-height: 1; color: #5fc8ff; filter: drop-shadow(0 0 12px #5fc8ff); }
 
 .tab-main { min-height: 0; padding: 22px 28px; display: flex; }
-.tab-split { flex: 1; display: grid; grid-template-columns: 1fr 360px; gap: 26px; min-height: 0; }
-.tab-left { min-height: 0; display: flex; flex-direction: column; gap: 16px; }
-.tab-right { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+/* Columna derecha (instrucción y video LSC): 32 % entre 240 y 380 px; en la tablet de 1180 px mide 360 px. */
+.tab-split { flex: 1; min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) clamp(240px, 32%, 380px); gap: 26px; }
+.tab-left { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+.tab-right { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
 .tab-center { align-items: center; justify-content: center; }
-.tab-title { margin: 0; font-size: 28px; color: var(--blue-dark); }
+.tab-title { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 28px; color: var(--blue-dark); }
+.tab-title .icon { color: var(--blue); }
 
 .tab-idle { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; }
 .tab-idle-logo { width: 110px; height: 110px; border-radius: 28px; background: var(--blue); color: #fff; font-size: 56px; display: grid; place-items: center; animation: pulse 2.4s infinite; }
@@ -235,24 +266,36 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); f
 .tab-idle em { font-size: 20px; color: var(--blue); }
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(20,93,160,.35); } 50% { box-shadow: 0 0 0 26px rgba(20,93,160,0); } }
 
-.tab-video-only { flex: 1; display: flex; justify-content: center; min-height: 0; }
-.tab-video-only .lsc-video { height: 100%; }
+/* Video solo: el 16:9 más grande que cabe dejando lugar al subtítulo (--cap); nunca se recorta ni se sale de la pantalla. */
+.tab-video-only { flex: 1; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; container-type: size; }
+.tab-video-only .lsc-video { --cap: 48px; width: min(100cqw, calc((100cqh - var(--cap)) * 16 / 9)); }
+.tab-video-only .lsc-video.has-notice { --cap: 0px; }
 
 .lsc-video { margin: 0; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
-.lsc-frame { position: relative; flex: 1; min-height: 0; border-radius: 16px; overflow: hidden; background: #e7eaee; aspect-ratio: 16 / 9; }
-.lsc-video.compact .lsc-frame { flex: none; }
-.lsc-frame video { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* El cuadro siempre es 16:9 (como los videos) y `contain` garantiza que nunca se recorten las manos. */
+.lsc-frame { position: relative; width: 100%; flex: none; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; background: #e7eaee; container-type: inline-size; }
+.lsc-frame video { width: 100%; height: 100%; object-fit: contain; display: block; }
 .lsc-tag { position: absolute; top: 10px; left: 10px; background: rgba(8, 42, 85, 0.85); color: #fff; font-weight: 800; font-size: 14px; padding: 4px 10px; border-radius: 8px; }
 .lsc-replay { position: absolute; bottom: 12px; right: 12px; min-height: 48px; border: 0; background: var(--blue); color: #fff; font-weight: 700; font-size: 20px; padding: 10px 18px; border-radius: 12px; }
 .lsc-video figcaption { display: flex; gap: 10px; align-items: center; font-size: 22px; font-weight: 600; justify-content: center; text-align: center; }
 .lsc-video.compact figcaption { font-size: 18px; }
 .lsc-video figcaption span { background: #1f2937; color: #fff; font-size: 14px; font-weight: 800; padding: 3px 6px; border-radius: 4px; }
+/* Aviso sobre el lado izquierdo del video, que en estos videos está vacío (la intérprete está a la derecha).
+   La letra escala con el ancho del video (cqw), así se lee igual en la tablet, en el celular y en la vista previa. */
+.lsc-notice { position: absolute; left: 3%; top: 50%; transform: translateY(-50%); max-width: 40%; display: flex; flex-direction: column; align-items: flex-start; gap: 0.3em; padding: 0.75em 0.9em; border-radius: 0.5em; background: rgba(8, 42, 85, 0.92); color: #fff; font-size: clamp(12px, 3.2cqw, 34px); line-height: 1.15; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); }
+.lsc-notice .icon { width: 1.4em; height: 1.4em; color: #ffd27a; }
+.lsc-notice strong { font-size: 1.15em; hyphens: auto; }
+.lsc-notice span { font-weight: 600; color: #dceeff; }
+@container (max-width: 480px) {
+  .lsc-notice { max-width: 44%; padding: 0.6em 0.7em; }
+  .lsc-tag { top: 6px; left: 6px; font-size: 11px; padding: 2px 6px; }
+}
 
 .tab-instruction { display: flex; align-items: center; gap: 12px; justify-content: center; background: #4a97be; color: #fff; font-weight: 700; font-size: 22px; padding: 14px; border-radius: 6px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,.12); }
 .tab-instruction .icon { font-size: 30px; }
 
-.tab-camera { position: relative; border-radius: 16px; overflow: hidden; background: #1c2733; aspect-ratio: 4 / 3; max-height: 170px; align-self: center; width: 100%; }
-.tab-camera.large { max-height: none; flex: 1; min-height: 0; aspect-ratio: auto; }
+/* Cámara: solo en la detección de la seña; en las elecciones el señante toca la pantalla. */
+.tab-camera { position: relative; flex: 1; min-height: 0; width: 100%; border-radius: 16px; overflow: hidden; background: #1c2733; }
 .tab-camera video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
 .tab-camera-empty { position: absolute; inset: 0; display: grid; place-items: center; color: #cbd5e1; font-size: 20px; }
 .tab-live { position: absolute; top: 10px; left: 10px; display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,.6); color: #4ade80; font-weight: 700; font-size: 14px; padding: 4px 10px; border-radius: 99px; }
@@ -263,26 +306,33 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); f
 .tab-chip { flex: 1; display: flex; gap: 10px; align-items: center; justify-content: center; border: 2px solid var(--line); border-radius: 14px; padding: 14px; font-size: 20px; font-weight: 700; color: var(--muted); }
 .tab-chip.is-match { border-color: var(--ok); background: #e6f4ea; color: var(--ok); }
 
-.tab-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px 22px; align-content: start; overflow-y: auto; padding: 8px 4px; }
-.tab-cards.dense { gap: 14px 18px; }
-.tab-card { position: relative; border: 0; background: #fcfcfc; border-radius: 14px; padding: 0 0 12px; display: flex; flex-direction: column; box-shadow: 0 5px 0 var(--c), 0 6px 14px rgba(0,0,0,.12); text-align: left; }
-/* 19 px negrita = texto grande: los colores de especialidad dan ≥ 3:1 con blanco. */
-.tab-card-tab { background: var(--c); color: #fff; font-weight: 700; font-size: 19px; text-align: center; padding: 8px 10px; border-radius: 12px; margin: -6px 12px 0; }
-.tab-card-body { display: flex; align-items: center; gap: 12px; padding: 12px 14px 0; font-size: 19px; }
-.tab-card-icon { font-size: 38px; line-height: 1; color: var(--c); }
-.tab-num { position: absolute; top: -12px; left: -8px; width: 38px; height: 38px; border-radius: 50%; background: var(--blue-dark); color: #fff; font-weight: 800; font-size: 20px; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+/* Opciones con aspecto de botón: borde, sombra inferior que "se hunde" al tocar y, al elegir, contorno verde y ✓.
+   3 columnas en la tablet (2 si hay 4 opciones o menos); las palabras largas se parten para no desbordar. */
+.tab-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 24px 22px; align-content: start; overflow-y: auto; padding: 18px 12px 12px; }
+.tab-cards.few { grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); }
+.tab-card { position: relative; min-height: 128px; border: 2px solid color-mix(in srgb, var(--c) 40%, #fff); background: #fff; border-radius: 18px; padding: 0 0 14px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 6px 0 var(--c), 0 8px 18px rgba(0, 0, 0, 0.12); text-align: left; transition: transform 0.08s, box-shadow 0.08s; }
+.tab-card:active, .tab-slot:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--c), 0 3px 8px rgba(0, 0, 0, 0.12); }
+/* 22 px negrita = texto grande: los colores de especialidad dan ≥ 3:1 con blanco. */
+.tab-card-tab { background: var(--c); color: #fff; font-weight: 700; font-size: 22px; line-height: 1.2; text-align: center; padding: 8px 12px; border-radius: 12px; margin: -10px 14px 0; hyphens: auto; overflow-wrap: anywhere; }
+.tab-card-body { display: flex; align-items: center; gap: 12px; padding: 0 16px; font-size: 24px; font-weight: 600; line-height: 1.2; }
+.tab-card-icon { display: grid; flex: none; font-size: 46px; line-height: 1; color: var(--c); }
+.tab-card-text { min-width: 0; hyphens: auto; overflow-wrap: anywhere; }
+.tab-num { position: absolute; top: -16px; left: -10px; width: 40px; height: 40px; border-radius: 50%; background: var(--blue-dark); color: #fff; font-weight: 800; font-size: 21px; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.tab-selected-mark { position: absolute; top: -16px; right: -10px; width: 40px; height: 40px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 26px; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.tab-selected-mark .icon { width: 1em; height: 1em; }
 .tab-card.is-selected, .tab-slot.is-selected { outline: 5px solid var(--ok); outline-offset: 3px; }
 .tab-card.is-selected .tab-num, .tab-slot.is-selected .tab-num { background: var(--ok); }
 
-.tab-slots { position: relative; padding-left: 90px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
-.tab-slots-icon { position: absolute; left: 0; top: 0; font-size: 64px; line-height: 1; color: var(--blue); }
-.tab-slots h3 { margin: 0 0 10px; background: #d9d9d9; font-size: 26px; padding: 4px 18px; }
+.tab-slots { min-height: 0; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding: 0 6px 6px 0; }
+.tab-slots h3 { margin: 0; background: #d9d9d9; font-size: 24px; padding: 3px 18px; }
 .tab-slots h3.alt { background: #2180c4; color: #111; }
-.tab-slot-row { display: flex; gap: 30px; padding-left: 16px; }
-.tab-slot { position: relative; width: 250px; border: 0; background: #fff; box-shadow: 0 4px 0 #3b8fd9, 0 4px 10px rgba(0,0,0,.15); padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; text-align: left; }
-.tab-slot-day { display: flex; gap: 10px; align-items: baseline; font-size: 22px; font-weight: 700; }
-.tab-slot-day b { font-size: 34px; font-weight: 400; }
-.tab-slot-time { font-size: 22px; }
+/* Cuadrícula: los horarios de un mes bajan de fila cuando no caben (antes iban en una sola fila y sacaban
+   de la pantalla la columna del video desde el 3.er horario del mismo mes). */
+.tab-slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 24px 20px; padding: 18px 12px 6px; }
+.tab-slot { --c: #3b8fd9; position: relative; min-height: 88px; border: 2px solid #b6d4f0; border-radius: 16px; background: #fff; box-shadow: 0 5px 0 var(--c), 0 6px 14px rgba(0, 0, 0, 0.12); padding: 10px 14px; display: flex; flex-direction: column; justify-content: center; gap: 4px; text-align: left; transition: transform 0.08s, box-shadow 0.08s; }
+.tab-slot-day { display: flex; flex-wrap: wrap; gap: 0 10px; align-items: baseline; font-size: 24px; font-weight: 700; }
+.tab-slot-day b { font-size: 36px; font-weight: 500; }
+.tab-slot-time { display: flex; align-items: center; gap: 6px; font-size: 24px; }
 .tab-slot-time .sun { color: #b35c00; }
 .tab-slot-time .moon { color: #3f4f99; }
 
@@ -300,7 +350,8 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); f
 .tab-result dt { color: var(--muted); }
 .tab-result dd { margin: 0; font-weight: 700; }
 
-.tab-progress { display: flex; padding: 12px 40px 16px; border-top: 1px solid var(--line); background: #f8fafc; }
+.tab-progress { padding: 12px 40px 16px; border-top: 1px solid var(--line); background: #f8fafc; }
+.tp-track { display: flex; }
 .tp-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; }
 .tp-line { position: absolute; top: 17px; right: 50%; width: 100%; height: 4px; background: var(--line); }
 .tp-item.done .tp-line, .tp-item.active .tp-line { background: var(--c); }
@@ -309,3 +360,160 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); f
 .tp-item.active .tp-dot { border-color: var(--c); color: var(--c); box-shadow: 0 0 0 5px color-mix(in srgb, var(--c) 20%, transparent); }
 .tp-label { font-size: 16px; color: var(--muted); font-weight: 600; }
 .tp-item.active .tp-label { color: var(--c); font-weight: 800; }
+.tp-caption { display: none; margin: 8px 0 0; text-align: center; font-size: 17px; font-weight: 800; color: var(--c); }
+
+/* ── Pantalla en vertical (tablet o celular): una columna con scroll; primero la instrucción y el video LSC. ── */
+@container tab (orientation: portrait) {
+  .tab-banner { gap: 14px; padding: 12px 18px; }
+  .tab-logo { font-size: 24px; padding: 6px 12px; }
+  .tab-welcome { padding-left: 14px; }
+  .tab-welcome small { font-size: 15px; }
+  .tab-welcome strong { font-size: 22px; }
+  .tab-welcome span, .tab-cross { display: none; }
+  .tab-main { padding: 16px 18px; }
+  .tab-split { display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
+  .tab-split > * { flex: none; }
+  .tab-right { order: -1; }
+  .tab-right .lsc-video, .tab-camera { width: 100%; max-width: 560px; align-self: center; }
+  .tab-camera { flex: none; aspect-ratio: 4 / 3; }
+  .tab-cards, .tab-slots { overflow: visible; }
+  .tab-video-only .lsc-video { --cap: 64px; }
+  .tab-result { min-width: 0; width: 100%; }
+}
+
+/* ── Celular en vertical: letras y botones a la medida de una pantalla de ~360-430 px. ── */
+@container tab (orientation: portrait) and (max-width: 520px) {
+  .tab-banner { gap: 10px; padding: 10px 12px; }
+  .tab-logo { font-size: 18px; padding: 5px 10px; border-radius: 10px; }
+  .tab-welcome { padding-left: 10px; }
+  .tab-welcome small { font-size: 12px; }
+  .tab-welcome strong { font-size: 16px; }
+  .tab-banner-end { gap: 0; }
+  .conn-badge { padding: 5px; }
+  /* Solo el ícono: el texto sigue disponible para lectores de pantalla. */
+  .conn-badge-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tab-main { padding: 12px 14px; }
+  .tab-title { font-size: 22px; }
+  .tab-instruction { font-size: 18px; padding: 10px; gap: 8px; }
+  .tab-instruction .icon { font-size: 24px; }
+  .lsc-video figcaption, .lsc-video.compact figcaption { font-size: 17px; }
+  .tab-cards, .tab-cards.few { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 16px 10px 10px; }
+  .tab-card { min-height: 0; }
+  .tab-card-tab { font-size: 20px; }
+  .tab-card-body { font-size: 21px; }
+  .tab-card-icon { font-size: 38px; }
+  .tab-slots h3 { font-size: 20px; }
+  .tab-slot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 12px; padding: 18px 8px 6px; }
+  .tab-slot { min-height: 0; padding: 10px 12px; }
+  .tab-slot-day { font-size: 18px; gap: 0 6px; }
+  .tab-slot-day b { font-size: 28px; }
+  .tab-slot-time { font-size: 18px; }
+  .tab-chips { flex-direction: column; gap: 8px; }
+  .tab-chip { font-size: 17px; padding: 10px; }
+  .tab-amount { padding: 22px 18px; }
+  .tab-amount span { font-size: 20px; }
+  .tab-amount strong { font-size: 46px; }
+  .tab-amount em { font-size: 18px; }
+  .tab-result { padding: 20px 16px; gap: 10px; }
+  .tab-result h2 { font-size: 26px; text-align: center; }
+  .tab-result dl div { font-size: 17px; gap: 12px; }
+  .tab-check { width: 72px; height: 72px; font-size: 38px; }
+  .tab-idle-logo { width: 80px; height: 80px; font-size: 40px; border-radius: 22px; }
+  .tab-idle strong { font-size: 24px; }
+  .tab-idle p { font-size: 18px; }
+  .tab-idle em { font-size: 16px; }
+}
+
+/* ── Celular en horizontal: poca altura; encabezado y barra compactos, letras más pequeñas. ── */
+@container tab (orientation: landscape) and (max-height: 560px) {
+  .tab-banner { gap: 14px; padding: 6px 16px; }
+  .tab-logo { font-size: 18px; padding: 4px 10px; border-radius: 9px; }
+  .tab-welcome { flex-direction: row; align-items: baseline; gap: 6px; padding-left: 14px; }
+  .tab-welcome small { font-size: 13px; }
+  .tab-welcome strong { font-size: 17px; }
+  .tab-welcome span, .tab-cross { display: none; }
+  .conn-badge { font-size: 12px; padding: 3px 8px; }
+  .tab-main { padding: 8px 16px; }
+  .tab-split { gap: 14px; grid-template-columns: minmax(0, 1fr) clamp(170px, 30%, 280px); }
+  .tab-left, .tab-right { gap: 8px; }
+  .tab-title { font-size: 18px; }
+  .tab-instruction { font-size: 15px; padding: 8px; gap: 8px; }
+  .tab-instruction .icon { font-size: 20px; }
+  .lsc-video { gap: 4px; }
+  .lsc-video figcaption, .lsc-video.compact figcaption { font-size: 14px; gap: 6px; }
+  .lsc-video figcaption span { font-size: 11px; }
+  .lsc-replay { min-height: 36px; bottom: 6px; right: 6px; font-size: 14px; padding: 6px 12px; }
+  .tab-video-only .lsc-video { --cap: 28px; }
+  .tab-cards { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px 12px; padding: 12px 8px 6px; }
+  .tab-cards.few { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .tab-card { min-height: 0; gap: 6px; padding-bottom: 8px; border-radius: 12px; box-shadow: 0 4px 0 var(--c), 0 4px 10px rgba(0, 0, 0, 0.12); }
+  .tab-card-tab { font-size: 15px; padding: 3px 8px; margin: -7px 10px 0; border-radius: 8px; }
+  .tab-card-body { font-size: 15px; gap: 8px; padding: 0 10px; }
+  .tab-card-icon { font-size: 26px; }
+  .tab-num, .tab-selected-mark { top: -10px; width: 26px; height: 26px; font-size: 14px; }
+  .tab-num { left: -6px; }
+  .tab-selected-mark { right: -6px; font-size: 18px; }
+  .tab-card.is-selected, .tab-slot.is-selected { outline-width: 3px; outline-offset: 2px; }
+  .tab-slots { gap: 6px; }
+  .tab-slots h3 { font-size: 15px; padding: 2px 12px; }
+  .tab-slot-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 14px 10px; padding: 12px 8px 4px; }
+  .tab-slot { min-height: 0; padding: 4px 10px; gap: 0; border-radius: 10px; box-shadow: 0 3px 0 var(--c), 0 3px 8px rgba(0, 0, 0, 0.12); }
+  .tab-slot-day { font-size: 15px; gap: 0 6px; }
+  .tab-slot-day b { font-size: 22px; }
+  .tab-slot-time { font-size: 14px; }
+  .tab-chips { gap: 8px; }
+  .tab-chip { font-size: 14px; padding: 6px; gap: 6px; border-radius: 10px; }
+  .tab-guide span { font-size: 12px; }
+  .tab-live { top: 6px; left: 6px; font-size: 11px; padding: 2px 8px; }
+  .tab-amount { padding: 12px 28px; gap: 4px; border-radius: 16px; }
+  .tab-amount span { font-size: 16px; }
+  .tab-amount strong { font-size: 40px; }
+  .tab-amount em { font-size: 15px; }
+  .tab-result { min-width: 0; padding: 10px 22px; gap: 6px; border-radius: 16px; }
+  .tab-result h2 { font-size: 20px; }
+  .tab-result dl { gap: 0; }
+  .tab-result dl div { font-size: 14px; padding: 2px 0; gap: 16px; }
+  .tab-check { width: 44px; height: 44px; font-size: 24px; }
+  .tab-idle-logo { width: 60px; height: 60px; font-size: 30px; border-radius: 16px; }
+  .tab-idle strong { font-size: 20px; }
+  .tab-idle p { font-size: 15px; }
+  .tab-idle em { font-size: 14px; }
+}
+
+/* ── Barra de progreso compacta (vertical o poca altura): sin etiqueta por paso, solo el paso actual. ── */
+@container tab (orientation: portrait) or (max-height: 560px) {
+  .tab-progress { padding: 8px 14px 10px; }
+  .tp-dot { width: 28px; height: 28px; border-width: 2px; font-size: 13px; }
+  .tp-line { top: 12px; height: 3px; }
+  .tp-item.active .tp-dot { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 20%, transparent); }
+  .tp-label { display: none; }
+  .tp-caption { display: block; }
+}
+@container tab (orientation: landscape) and (max-height: 560px) {
+  .tab-progress { padding: 4px 14px 6px; }
+  .tp-dot { width: 22px; height: 22px; font-size: 11px; }
+  .tp-line { top: 9px; }
+  .tp-caption { margin-top: 2px; font-size: 13px; }
+}
+
+/* Avisos de conexión e inicio de la tablet en pantallas pequeñas (están fuera de .tab-screen). */
+@media (max-height: 500px) {
+  .conn-card { padding: 18px 22px; gap: 6px; }
+  .conn-card > span { font-size: 40px; }
+  .conn-card strong { font-size: 20px; }
+  .conn-card p { font-size: 15px; }
+  .tablet-start { font-size: 18px; }
+  .tablet-start > .icon { width: 64px; height: 64px; }
+  .tablet-start strong { font-size: 36px; }
+  .tablet-code { gap: 10px; font-size: 16px; }
+  .tablet-code > .icon { width: 48px; height: 48px; }
+  .tablet-code strong { font-size: 28px; }
+  .tablet-code input { font-size: 30px; padding: 8px; }
+}
+@media (max-width: 480px) {
+  .conn-card { padding: 24px 18px; }
+  .conn-card strong { font-size: 22px; }
+  .conn-card p { font-size: 16px; }
+  .tablet-start { font-size: 20px; padding: 24px; text-align: center; }
+  .tablet-start strong { font-size: 40px; }
+}

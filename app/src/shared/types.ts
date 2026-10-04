@@ -8,15 +8,19 @@ export type VideoId =
 
 export interface VideoRef { id: VideoId; src: string; caption: string }
 
-export interface Progress { labels: string[]; current: number; color: string }
+/** `title`: nombre completo del paso actual, para el resumen de la barra en pantallas pequeñas. */
+export interface Progress { labels: string[]; current: number; color: string; title?: string }
 
 export interface MenuOption { tab: string; text: string; icon: IconName; color: string }
 
 export interface Slot { date: string; time: string } // "2026-10-01", "07:00"
 
+/** Aviso escrito sobre el lado izquierdo del video (p. ej. "No hay disponibilidad"). */
+export interface Notice { title: string; text: string }
+
 export type TabletView =
   | { kind: "idle"; message?: string }
-  | { kind: "video" }
+  | { kind: "video"; notice?: Notice }
   | { kind: "detect"; options: { icon: IconName; text: string }[]; detected: number | null }
   | { kind: "menu"; title: string; instruction: string; options: MenuOption[]; selected: number | null }
   | { kind: "horarios"; instruction: string; slots: Slot[]; selected: number | null }
