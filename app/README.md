@@ -3,11 +3,11 @@
 Prototipo funcional de dos pantallas sincronizadas:
 
 - **Panel del funcionario (PC):** `/`. Portal de la IPS simulado, con la "ventanita" InLSC que se abre como panel lateral.
-- **Tablet del señante:** `/?tablet&s=<código>`. Videos LSC reales, infografías táctiles, cámara y barra de progreso.
+- **Tablet del señante:** `/?tablet&s=<código>`. Videos LSC reales, infografías táctiles, cámara (solo al detectar la seña) y barra de progreso. Se adapta a tablet horizontal o vertical y a celular.
 
 ## Sesiones y sincronización
 
-Cada panel del funcionario abre una **sesión** con un código de 6 caracteres (p. ej. `JP25GT`), visible en ⚙ → *Conectar la tablet* junto con un **código QR**. La tablet se une escaneando el QR o abriendo la app con `?tablet` y escribiendo el código. Varias parejas PC–tablet pueden funcionar a la vez sin interferir.
+Cada panel del funcionario abre una **sesión** con un código de 6 caracteres (p. ej. `JP25GT`), visible con un **código QR** en el aviso *Tablet desconectada* del panel (con la tablet ya conectada, el código aparece junto a *Nueva sesión* antes de iniciar la atención). La tablet se une escaneando el QR o abriendo la app con `?tablet` y escribiendo el código. Varias parejas PC–tablet pueden funcionar a la vez sin interferir.
 
 - El código se conserva al recargar el panel, y la tablet recuerda el último código: si algo se desconecta, ambos se reconectan solos.
 - *↻ Nueva sesión* genera otro código y desconecta las tablets actuales. En la tablet, *Cambiar código* aparece mientras no hay conexión.
@@ -47,7 +47,7 @@ INLSC_HTTP=1 PORT=5175 VITE_SYNC=relay npm start   # abrir http://localhost:5175
 
 > ⚠️ Con GitHub gratuito, Pages exige que el repositorio sea **público**: los videos de los intérpretes y el nombre de la IPS (`src/shared/config.ts`) quedarán visibles en internet. Confirme que tiene el consentimiento de los intérpretes y autorización de la IPS antes de publicar.
 
-> ⚠️ **El reconocimiento de señas es simulado.** El funcionario dispara la detección desde el panel (sección 🎬 *Guion de la demo*). La selección **táctil** en la tablet sí es real. El panel muestra siempre la etiqueta "MODO DEMO".
+> ⚠️ **La detección del trámite es simulada.** El funcionario la dispara desde el panel (caja *Servicios básicos de salud* del paso de detección). La selección **táctil** en la tablet sí es real. En las infografías, por defecto el señante elige solo tocando (Ajustes1); la **seña del número** es real (beta), pero hay que activarla en el panel (ver *Reconocimiento de señas LSC* más abajo). El panel muestra siempre la etiqueta "MODO DEMO".
 
 ## Requisitos
 
@@ -64,7 +64,7 @@ npm run dev      # servidor HTTPS en el puerto 5173, accesible en la red local
 ```
 
 1. En el PC abra `https://localhost:5173`.
-2. En la tablet escanee el QR de ⚙ → *Conectar la tablet* o abra la dirección que aparece allí (p. ej. `https://192.168.1.20:5173/?tablet&s=JP25GT`).
+2. En la tablet escanee el QR del aviso *Tablet desconectada* o abra la dirección que aparece allí (p. ej. `https://192.168.1.20:5173/?tablet&s=JP25GT`).
 3. El certificado es autofirmado:
    - En **iPad (Safari):** *Mostrar detalles → visitar este sitio web*.
    - En **Android (Chrome):** *Configuración avanzada → Continuar*.
@@ -76,29 +76,30 @@ Para probar sin la tablet, abra la dirección de la tablet (con `&s=<código>`) 
 
 | # | Funcionario (PC) | Señante (tablet) |
 |---|---|---|
-| 1 | *Iniciar atención* en la ventanita | Video de saludo |
+| 1 | Elija el intérprete (*Mujer / Hombre*) y pulse *Iniciar atención* en la ventanita | Video de saludo |
 | 2 | *Continuar* | Video "¿Cuál es su solicitud?" |
 | 3 | *Activar cámara* | Cámara activa + los 3 trámites |
-| 4 | 🎬 *Simular reconocimiento* (Asignación) → *Confirmar* | Hace la seña de "agendar cita"; se marca ✓ |
+| 4 | *Servicios básicos de salud* → *Simular reconocimiento* (Asignación) → *Confirmar* | Hace la seña de "agendar cita"; se marca ✓ |
 | 5 | *Documento recibido* | Video "entregue su documento" |
 | 6 | Especialidad: *Ejemplo* → *Enviar a la tablet* | Infografía de especialidades → **toca una opción** |
 | 7 | *Confirmar opción* → *Orden verificada* | Video "orden médica" |
-| 8 | *Usar horarios de ejemplo* → *Enviar* → 🎬 número 3 → *Confirmar* | Infografía de horarios; hace la seña del número |
+| 8 | Elija una fecha y toque las horas (o *Usar horarios de ejemplo*) → *Enviar* → *Confirmar opción* | Infografía de horarios → **toca un horario** |
 | 9 | *Finalizar atención* | "¡Cita asignada!" + "Que tenga un buen día" |
 
 **Variantes para mostrar:**
 - **Confianza baja:** en el paso 4 use *Simular confianza baja* para mostrar la validación del funcionario y *Volver a captar seña*.
-- **Sin disponibilidad:** en el paso 8 use *Sin disponibilidad* para reproducir el video de negación.
+- **Sin disponibilidad:** en el paso 8 use *Sin disponibilidad*: la tablet reproduce el video de negación con el aviso «No hay disponibilidad. Intente otro día.» y el panel ofrece *Finalizar atención*.
+- **Celular:** abra la dirección de la tablet en un celular, en vertical u horizontal.
 - **Otros trámites:** cancelación (lista de citas simuladas) y facturación (campo de valor en $).
 
 ## Qué es real y qué es simulado
 
 | Real | Simulado / pendiente |
 |---|---|
-| Sincronización PC ↔ tablet por sesiones (SSE local o WebRTC) | Reconocimiento de señas (lo dispara el funcionario) |
-| Videos LSC reales y elección hombre/mujer según el perfil (⚙) | Citas del paciente (`MOCK_CITAS`) |
+| Sincronización PC ↔ tablet por sesiones (SSE local o relé MQTT) | Reconocimiento de señas (lo dispara el funcionario) |
+| Videos LSC reales y elección hombre/mujer según el perfil (se elige en el panel antes de iniciar) | Citas del paciente (`MOCK_CITAS`) |
 | Selección táctil en la tablet | Integración con el sistema de agendamiento de la IPS |
-| Cámara de la tablet (vista previa) | Registro de información por una semana |
+| Cámara de la tablet (vista previa, solo al detectar la seña) | Registro de información por una semana |
 | Catálogo real de especialidades y servicios | Videos faltantes: despedida INT09, hombre en facturación, valor con intérprete |
 
 ## Estructura

@@ -83,7 +83,7 @@ export function SpecialtyPicker({ onSend }: { onSend: (options: MenuOption[]) =>
           </ol>
         </>
       )}
-      <button className="btn primary" disabled={!chosen.length} onClick={() => onSend(chosen)}>
+      <button className="btn primary picker-send" disabled={!chosen.length} onClick={() => onSend(chosen)}>
         Enviar a la tablet ({chosen.length}/{MAX_OPTIONS}) <Icon name="arrow_forward" />
       </button>
     </div>
@@ -162,7 +162,7 @@ export function SlotPicker({ onSend, onNone }: { onSend: (slots: Slot[]) => void
           </div>
         </>
       )}
-      <button className="btn primary" disabled={!slots.length} onClick={() => onSend(slots)}>Enviar horarios a la tablet ({slots.length}) <Icon name="arrow_forward" /></button>
+      <button className="btn primary picker-send" disabled={!slots.length} onClick={() => onSend(slots)}>Enviar horarios a la tablet ({slots.length}) <Icon name="arrow_forward" /></button>
       <button className="btn danger-ghost" onClick={onNone}>Sin disponibilidad · mostrar video de negación</button>
     </div>
   )
