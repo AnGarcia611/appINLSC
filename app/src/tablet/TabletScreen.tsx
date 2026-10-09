@@ -4,6 +4,13 @@ import { formatCOP, formatTime, parseDate } from "../shared/catalog"
 import Icon, { type IconName } from "../shared/Icon"
 import type { Notice, Progress, Slot, TabletState, VideoRef } from "../shared/types"
 
+/**
+ * Guiones suaves en las palabras médicas más largas del catálogo ("gastro-enterológica", "fono-audiología"):
+ * si no caben en la tarjeta se parten por ahí y no en cualquier letra. Si caben, el guion no se ve.
+ */
+const SOFT_BREAKS = /(gastro|otorrino|laringo|entero|fono|audio)(?=\p{L}{4})/giu
+const breakable = (text: string) => text.replace(/\p{L}{14,}/gu, (word) => word.replace(SOFT_BREAKS, "$1\u00AD"))
+
 interface Props {
   state: TabletState
   /** Stream de la cámara de la tablet; en la vista previa del funcionario es null. */
@@ -74,14 +81,14 @@ export default function TabletScreen({ state, stream, cameraError, preview, stat
         )}
 
         {view.kind === "menu" && (
-          <div className="tab-split">
+          <div className="tab-split choices">
             <section className="tab-left">
               <h2 className="tab-title">{view.title}</h2>
               <div className={`tab-cards ${view.options.length <= 4 ? "few" : ""}`}>
                 {view.options.map((o, i) => (
                   <button key={i} className={`tab-card ${view.selected === i ? "is-selected" : ""}`} aria-pressed={view.selected === i} style={{ "--c": o.color } as React.CSSProperties} onClick={() => select(i)}>
-                    <span className="tab-card-tab">{o.tab}</span>
-                    <span className="tab-card-body"><span className="tab-card-icon"><Icon name={o.icon} /></span><span className="tab-card-text">{o.text}</span></span>
+                    <span className="tab-card-tab">{breakable(o.tab)}</span>
+                    <span className="tab-card-body"><span className="tab-card-icon"><Icon name={o.icon} /></span><span className="tab-card-text">{breakable(o.text)}</span></span>
                     <span className="tab-num">{i + 1}</span>
                     {view.selected === i && <SelectedMark />}
                   </button>
@@ -97,7 +104,7 @@ export default function TabletScreen({ state, stream, cameraError, preview, stat
         )}
 
         {view.kind === "horarios" && (
-          <div className="tab-split">
+          <div className="tab-split choices">
             <section className="tab-left">
               <SlotBoard slots={view.slots} selected={view.selected} onSelect={select} />
             </section>

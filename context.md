@@ -44,7 +44,7 @@ En la columna **Dispositivo**, 🟪 significa PC admon y 🟩 significa tablet s
 |---|---|---|
 | 8 | 🟩 | Video "solicitud de documento" |
 | 9 | 🟪 | El funcionario elige qué **especialidades o servicios** mostrar |
-| 10 | 🟩 | **Infografía** con las opciones elegidas (sobre una plantilla fija) + video "seleccione su cita". El señante responde con la **seña del número** o tocando la pantalla |
+| 10 | 🟩 | **Infografía** con las opciones elegidas (sobre una plantilla fija) + video "seleccione su cita". El señante responde con la **seña del número** o tocando la pantalla. *Ajustes1 (28-sep): el dueño pidió que en las elecciones el señante solo toque la pantalla, sin cámara. Por eso la seña del número existe, pero viene apagada por defecto (preferencia del panel).* |
 | 11 | 🟩 | Video "orden médica" |
 | 12 | 🟪 | Botón de verificación para continuar |
 | 13 | 🟪→🟩 | El funcionario configura **fechas y horarios** disponibles. La tablet los muestra en una infografía + video. Si no hay disponibilidad, se muestra el **video de negación** |
@@ -179,7 +179,7 @@ Conviene normalizar todo esto antes de consumir los videos desde código.
 1. **App real (PC + tablet)** a partir del prototipo: separar componentes, agregar un backend de sincronización para producción (WebSocket o SSE en un servidor Node local) y reproducir los `.mp4` reales.
 2. **Motor de reconocimiento LSC ("IA Visor"):**
    - Clasificar la intención entre 3 clases (asignación, cancelación, facturación).
-   - Reconocer las **señas de números** para elegir opciones en las infografías.
+   - Reconocer las **señas de números** para elegir opciones en las infografías. *Implementado como beta (1–9), apagado por defecto porque Ajustes1 (28-sep) pide solo toque en las elecciones. Falta que el dueño decida si se activa (ver [ajustes1_resumen.md](ajustes1_resumen.md)).*
    - Reconocer aceptación y negación.
    - El PDF dice "Detección señas (claude)". Hay que definir si se usa un modelo de visión o LLM, o un modelo propio entrenado con el dataset. **Con el dataset actual (1 toma por intención) no alcanza para entrenar un modelo propio.** Ver [investigacion_reconocimiento_LSC.md](investigacion_reconocimiento_LSC.md).
 3. **Generador de infografías** sobre la plantilla (especialidades, servicios, fechas y citas) usando el catálogo de `especialidades_tarjetas.pdf`.

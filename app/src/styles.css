@@ -181,7 +181,9 @@ input, select { font: inherit; }
 .picker-field input { width: 100%; color: var(--text); }
 .currency { font-weight: 800; font-size: 18px; }
 /* Sin el bloque de ajustes durante la atención, la lista puede ocupar casi media pantalla. */
-.picker-list { max-height: min(48vh, 440px); overflow-y: auto; border: 1px solid var(--field-line); border-radius: 10px; }
+.picker-list { max-height: min(42vh, 400px); overflow-y: auto; border: 1px solid var(--field-line); border-radius: 10px; }
+/* El botón de enviar queda siempre a la vista al fondo del panel, aunque la lista crezca. */
+.picker-send { position: sticky; bottom: 0; z-index: 1; box-shadow: 0 -10px 10px -2px #fff; }
 .picker-group + .picker-group { border-top: 1px solid var(--line); }
 .picker-head { width: 100%; min-height: 44px; display: flex; gap: 8px; align-items: center; border: 0; background: #fff; padding: 9px 10px; font-size: 14px; font-weight: 600; text-align: left; }
 .picker-head em { margin-left: auto; font-style: normal; color: var(--blue); }
@@ -253,6 +255,8 @@ input, select { font: inherit; }
 .tab-main { min-height: 0; padding: 22px 28px; display: flex; }
 /* Columna derecha (instrucción y video LSC): 32 % entre 240 y 380 px; en la tablet de 1180 px mide 360 px. */
 .tab-split { flex: 1; min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) clamp(240px, 32%, 380px); gap: 26px; }
+/* En las elecciones la columna del video cede ~60 px a las opciones (en la tablet: 303 px en vez de 360). */
+.tab-split.choices { grid-template-columns: minmax(0, 1fr) clamp(220px, 27%, 320px); }
 .tab-left { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
 .tab-right { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
 .tab-center { align-items: center; justify-content: center; }
@@ -280,14 +284,15 @@ input, select { font: inherit; }
 .lsc-video figcaption { display: flex; gap: 10px; align-items: center; font-size: 22px; font-weight: 600; justify-content: center; text-align: center; }
 .lsc-video.compact figcaption { font-size: 18px; }
 .lsc-video figcaption span { background: #1f2937; color: #fff; font-size: 14px; font-weight: 800; padding: 3px 6px; border-radius: 4px; }
-/* Aviso sobre el lado izquierdo del video, que en estos videos está vacío (la intérprete está a la derecha).
+/* Aviso sobre el lado izquierdo del video, que en estos videos está vacío: medido cuadro por cuadro, la intérprete
+   nunca pasa del 45 % del ancho, y el aviso termina como máximo en el 43 % (3 % + 40 %), en cualquier tamaño.
    La letra escala con el ancho del video (cqw), así se lee igual en la tablet, en el celular y en la vista previa. */
-.lsc-notice { position: absolute; left: 3%; top: 50%; transform: translateY(-50%); max-width: 40%; display: flex; flex-direction: column; align-items: flex-start; gap: 0.3em; padding: 0.75em 0.9em; border-radius: 0.5em; background: rgba(8, 42, 85, 0.92); color: #fff; font-size: clamp(12px, 3.2cqw, 34px); line-height: 1.15; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); }
+.lsc-notice { position: absolute; left: 3%; top: 50%; transform: translateY(-50%); max-width: 40%; display: flex; flex-direction: column; align-items: flex-start; gap: 0.3em; padding: 0.75em 0.9em; border-radius: 0.5em; background: rgba(8, 42, 85, 0.92); color: #fff; font-size: clamp(11px, 3.2cqw, 34px); line-height: 1.15; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); }
 .lsc-notice .icon { width: 1.4em; height: 1.4em; color: #ffd27a; }
-.lsc-notice strong { font-size: 1.15em; hyphens: auto; }
+.lsc-notice strong { font-size: 1.15em; overflow-wrap: anywhere; }
 .lsc-notice span { font-weight: 600; color: #dceeff; }
 @container (max-width: 480px) {
-  .lsc-notice { max-width: 44%; padding: 0.6em 0.7em; }
+  .lsc-notice { padding: 0.6em 0.65em; }
   .lsc-tag { top: 6px; left: 6px; font-size: 11px; padding: 2px 6px; }
 }
 
@@ -307,18 +312,20 @@ input, select { font: inherit; }
 .tab-chip.is-match { border-color: var(--ok); background: #e6f4ea; color: var(--ok); }
 
 /* Opciones con aspecto de botón: borde, sombra inferior que "se hunde" al tocar y, al elegir, contorno verde y ✓.
-   3 columnas en la tablet (2 si hay 4 opciones o menos); las palabras largas se parten para no desbordar. */
-.tab-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 24px 22px; align-content: start; overflow-y: auto; padding: 18px 12px 12px; }
+   3 columnas en la tablet (2 si hay 4 opciones o menos). Sin partición automática con guion ("dermato-lógica"):
+   las palabras pasan enteras a la línea siguiente y solo se corta una palabra más larga que la tarjeta. */
+.tab-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 26px 24px; align-content: start; overflow-y: auto; padding: 20px 16px 12px; }
 .tab-cards.few { grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); }
 .tab-card { position: relative; min-height: 128px; border: 2px solid color-mix(in srgb, var(--c) 40%, #fff); background: #fff; border-radius: 18px; padding: 0 0 14px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 6px 0 var(--c), 0 8px 18px rgba(0, 0, 0, 0.12); text-align: left; transition: transform 0.08s, box-shadow 0.08s; }
 .tab-card:active, .tab-slot:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--c), 0 3px 8px rgba(0, 0, 0, 0.12); }
 /* 22 px negrita = texto grande: los colores de especialidad dan ≥ 3:1 con blanco. */
-.tab-card-tab { background: var(--c); color: #fff; font-weight: 700; font-size: 22px; line-height: 1.2; text-align: center; padding: 8px 12px; border-radius: 12px; margin: -10px 14px 0; hyphens: auto; overflow-wrap: anywhere; }
-.tab-card-body { display: flex; align-items: center; gap: 12px; padding: 0 16px; font-size: 24px; font-weight: 600; line-height: 1.2; }
-.tab-card-icon { display: grid; flex: none; font-size: 46px; line-height: 1; color: var(--c); }
-.tab-card-text { min-width: 0; hyphens: auto; overflow-wrap: anywhere; }
-.tab-num { position: absolute; top: -16px; left: -10px; width: 40px; height: 40px; border-radius: 50%; background: var(--blue-dark); color: #fff; font-weight: 800; font-size: 21px; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
-.tab-selected-mark { position: absolute; top: -16px; right: -10px; width: 40px; height: 40px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 26px; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.tab-card-tab { background: var(--c); color: #fff; font-weight: 700; font-size: 20px; line-height: 1.2; text-align: center; padding: 7px 16px; border-radius: 12px; margin: -10px 6px 0; overflow-wrap: anywhere; }
+.tab-card-body { display: flex; align-items: center; gap: 10px; padding: 0 12px; font-size: 24px; font-weight: 600; line-height: 1.2; }
+.tab-card-icon { display: grid; flex: none; font-size: 34px; line-height: 1; color: var(--c); }
+.tab-card-icon .icon { width: 1em; height: 1em; }
+.tab-card-text { min-width: 0; overflow-wrap: anywhere; }
+.tab-num { position: absolute; top: -18px; left: -14px; width: 38px; height: 38px; border-radius: 50%; background: var(--blue-dark); color: #fff; font-weight: 800; font-size: 20px; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.tab-selected-mark { position: absolute; top: -18px; right: -14px; width: 38px; height: 38px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 26px; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
 .tab-selected-mark .icon { width: 1em; height: 1em; }
 .tab-card.is-selected, .tab-slot.is-selected { outline: 5px solid var(--ok); outline-offset: 3px; }
 .tab-card.is-selected .tab-num, .tab-slot.is-selected .tab-num { background: var(--ok); }
@@ -328,7 +335,7 @@ input, select { font: inherit; }
 .tab-slots h3.alt { background: #2180c4; color: #111; }
 /* Cuadrícula: los horarios de un mes bajan de fila cuando no caben (antes iban en una sola fila y sacaban
    de la pantalla la columna del video desde el 3.er horario del mismo mes). */
-.tab-slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 24px 20px; padding: 18px 12px 6px; }
+.tab-slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 26px 24px; padding: 20px 16px 6px; }
 .tab-slot { --c: #3b8fd9; position: relative; min-height: 88px; border: 2px solid #b6d4f0; border-radius: 16px; background: #fff; box-shadow: 0 5px 0 var(--c), 0 6px 14px rgba(0, 0, 0, 0.12); padding: 10px 14px; display: flex; flex-direction: column; justify-content: center; gap: 4px; text-align: left; transition: transform 0.08s, box-shadow 0.08s; }
 .tab-slot-day { display: flex; flex-wrap: wrap; gap: 0 10px; align-items: baseline; font-size: 24px; font-weight: 700; }
 .tab-slot-day b { font-size: 36px; font-weight: 500; }
@@ -398,10 +405,10 @@ input, select { font: inherit; }
   .tab-instruction .icon { font-size: 24px; }
   .lsc-video figcaption, .lsc-video.compact figcaption { font-size: 17px; }
   .tab-cards, .tab-cards.few { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 16px 10px 10px; }
-  .tab-card { min-height: 0; }
+  .tab-card { min-height: auto; }
   .tab-card-tab { font-size: 20px; }
   .tab-card-body { font-size: 21px; }
-  .tab-card-icon { font-size: 38px; }
+  .tab-card-icon { font-size: 32px; }
   .tab-slots h3 { font-size: 20px; }
   .tab-slot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 12px; padding: 18px 8px 6px; }
   .tab-slot { min-height: 0; padding: 10px 12px; }
@@ -434,7 +441,7 @@ input, select { font: inherit; }
   .tab-welcome span, .tab-cross { display: none; }
   .conn-badge { font-size: 12px; padding: 3px 8px; }
   .tab-main { padding: 8px 16px; }
-  .tab-split { gap: 14px; grid-template-columns: minmax(0, 1fr) clamp(170px, 30%, 280px); }
+  .tab-split, .tab-split.choices { gap: 14px; grid-template-columns: minmax(0, 1fr) clamp(170px, 30%, 280px); }
   .tab-left, .tab-right { gap: 8px; }
   .tab-title { font-size: 18px; }
   .tab-instruction { font-size: 15px; padding: 8px; gap: 8px; }
@@ -446,10 +453,10 @@ input, select { font: inherit; }
   .tab-video-only .lsc-video { --cap: 28px; }
   .tab-cards { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px 12px; padding: 12px 8px 6px; }
   .tab-cards.few { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
-  .tab-card { min-height: 0; gap: 6px; padding-bottom: 8px; border-radius: 12px; box-shadow: 0 4px 0 var(--c), 0 4px 10px rgba(0, 0, 0, 0.12); }
+  .tab-card { min-height: auto; gap: 6px; padding-bottom: 8px; border-radius: 12px; box-shadow: 0 4px 0 var(--c), 0 4px 10px rgba(0, 0, 0, 0.12); }
   .tab-card-tab { font-size: 15px; padding: 3px 8px; margin: -7px 10px 0; border-radius: 8px; }
   .tab-card-body { font-size: 15px; gap: 8px; padding: 0 10px; }
-  .tab-card-icon { font-size: 26px; }
+  .tab-card-icon { font-size: 22px; }
   .tab-num, .tab-selected-mark { top: -10px; width: 26px; height: 26px; font-size: 14px; }
   .tab-num { left: -6px; }
   .tab-selected-mark { right: -6px; font-size: 18px; }
@@ -457,7 +464,7 @@ input, select { font: inherit; }
   .tab-slots { gap: 6px; }
   .tab-slots h3 { font-size: 15px; padding: 2px 12px; }
   .tab-slot-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 14px 10px; padding: 12px 8px 4px; }
-  .tab-slot { min-height: 0; padding: 4px 10px; gap: 0; border-radius: 10px; box-shadow: 0 3px 0 var(--c), 0 3px 8px rgba(0, 0, 0, 0.12); }
+  .tab-slot { min-height: 0; padding: 6px 10px 6px 20px; gap: 0; border-radius: 10px; box-shadow: 0 3px 0 var(--c), 0 3px 8px rgba(0, 0, 0, 0.12); }
   .tab-slot-day { font-size: 15px; gap: 0 6px; }
   .tab-slot-day b { font-size: 22px; }
   .tab-slot-time { font-size: 14px; }
