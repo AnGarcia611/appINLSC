@@ -45,7 +45,7 @@ export function jointAngles(p: Point[]): number[] {
  * Extensión de cada dedo, de 0 (doblado) a 1 (extendido), combinando dos señales:
  *   - rectitud: suma de flexiones de las articulaciones;
  *   - alcance: distancia punta–muñeca relativa al tamaño de la palma.
- * Para el pulgar, el alcance se mide desde la base del índice (el pulgar doblado queda pegado a la palma).
+ * Para el pulgar, el alcance se mide desde la base del meñique (el pulgar doblado queda pegado a la palma).
  */
 export function fingerExtension(p: Point[]): number[] {
   const size = palmSize(p)
@@ -53,9 +53,12 @@ export function fingerExtension(p: Point[]): number[] {
   return CHAIN.map(([, , , tip], f) => {
     const curl = angles[f * 3] * (f === 0 ? 0.5 : 1) + angles[f * 3 + 1] + angles[f * 3 + 2]
     if (f === 0) {
-      const reach = dist(p[tip], p[5]) / size // pulgar: punta lejos de la base del índice
+      // Pulgar: sobre todo la rectitud. Muchos señantes hacen el 5 con el pulgar recto pero pegado al índice
+      // (captura S-9BST: rectitud 0.27 rad en el 5 contra 1.6 en el 4), así que el alcance se mide desde la base
+      // del meñique, que sí cambia cuando el pulgar se abre aunque quede cerca del índice.
+      const spread = dist(p[tip], p[17]) / size
       const straight = clamp01(1 - (angles[1] + angles[2] - 0.35) / 1.3)
-      return clamp01(0.6 * clamp01((reach - 0.45) / 0.5) + 0.4 * straight)
+      return clamp01(0.35 * clamp01((spread - 0.45) / 0.5) + 0.65 * straight)
     }
     const reach = dist(p[tip], p[0]) / size // ≈ 1.9 extendido, ≈ 0.9 cerrado
     const straight = clamp01(1 - (curl - 0.5) / 2.2) // ≈ 0.2 rad extendido, ≈ 3 rad cerrado

@@ -150,6 +150,7 @@ input, select { font: inherit; }
 
 .demo-box { border: 1px dashed #d8b64a; background: #fffcf2; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 .demo-title { font-size: 12px; font-weight: 700; color: #8a6400; }
+details.demo-box > summary { cursor: pointer; }
 
 .conf { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
 .conf-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--muted); }
@@ -306,6 +307,12 @@ input, select { font: inherit; }
 .tab-live { position: absolute; top: 10px; left: 10px; display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,.6); color: #4ade80; font-weight: 700; font-size: 14px; padding: 4px 10px; border-radius: 99px; }
 .tab-guide { position: absolute; inset: 12% 18%; border: 4px solid #4ade80; border-radius: 18px; display: flex; align-items: flex-end; justify-content: center; }
 .tab-guide span { background: rgba(0,0,0,.6); color: #fff; font-size: 16px; padding: 4px 10px; border-radius: 8px; margin-bottom: 10px; }
+/* Detección del trámite con reconocimiento: la cámara con esqueleto llena el recuadro y el estado va abajo. */
+.tab-camera-vision .vcam { position: absolute; inset: 0; border-radius: 0; }
+.tab-camera-vision .tab-guide span { display: none; }
+.tab-sign-status { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 8px; max-width: calc(100% - 24px); background: rgba(0,0,0,.72); color: #fff; font-size: 18px; font-weight: 700; padding: 8px 14px; border-radius: 12px; text-align: left; }
+.tab-sign-status.señando { color: #fde68a; }
+.tab-sign-status.reconocido { background: #177a4c; }
 
 .tab-chips { display: flex; gap: 14px; }
 .tab-chip { flex: 1; display: flex; gap: 10px; align-items: center; justify-content: center; border: 2px solid var(--line); border-radius: 14px; padding: 14px; font-size: 20px; font-weight: 700; color: var(--muted); }
@@ -472,6 +479,7 @@ input, select { font: inherit; }
   .tab-chip { font-size: 14px; padding: 6px; gap: 6px; border-radius: 10px; }
   .tab-guide span { font-size: 12px; }
   .tab-live { top: 6px; left: 6px; font-size: 11px; padding: 2px 8px; }
+  .tab-sign-status { font-size: 13px; padding: 5px 10px; bottom: 6px; }
   .tab-amount { padding: 12px 28px; gap: 4px; border-radius: 16px; }
   .tab-amount span { font-size: 16px; }
   .tab-amount strong { font-size: 40px; }

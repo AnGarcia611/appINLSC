@@ -27,13 +27,15 @@ export interface Take {
   /** Fracción de fotogramas con al menos una mano detectada. */
   handRatio: number
   frames: CompactFrame[]
+  /** Solo en tomas simuladas (`synth.ts`): id de la toma real de la que salió. */
+  source?: string
 }
 
 /** Respuesta de la validación de vocabulario: ¿así hace usted esta seña? */
 export interface Validation { task: string; matches: boolean; comment?: string; at: string }
 
 /** Prueba del reconocedor: qué entendió y si acertó según el señante. */
-export interface Trial { task: "número" | "cabeza"; expected: string; predicted: string | null; confidence: number | null; correct: boolean; at: string }
+export interface Trial { task: "número" | "cabeza" | "trámite"; expected: string; predicted: string | null; confidence: number | null; correct: boolean; at: string }
 
 export interface Profile {
   audicion?: "sordo" | "hipoacúsico" | "oyente"
@@ -66,6 +68,8 @@ export interface CapturePackage {
   validations: Validation[]
   takes: Take[]
   trials: Trial[]
+  /** Solo en paquetes simulados: no son de una persona real y nunca se usan para evaluar. */
+  synthetic?: { from: string; persona: string; seed: number }
 }
 
 const r4 = (x: number) => Math.round(x * 1e4) / 1e4

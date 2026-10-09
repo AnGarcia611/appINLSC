@@ -4,6 +4,7 @@ import type { TabletState } from "../shared/types"
 import Icon, { type IconName } from "../shared/Icon"
 import TabletScreen from "./TabletScreen"
 import SignPanel from "./SignPanel"
+import IntentPanel from "./IntentPanel"
 import { loadTracker } from "../vision/tracker"
 import { cameraBlockedReason } from "../shared/camera"
 
@@ -20,7 +21,7 @@ function initialCode(): string | null {
   } catch { return isValidCode(fromUrl) ? fromUrl : null }
 }
 
-/** App de la tablet del señante: recibe el estado del funcionario y reporta selecciones (toque o seña del número). */
+/** App de la tablet del señante: recibe el estado del funcionario y reporta selecciones (toque o seña) y el trámite reconocido. */
 export default function TabletApp() {
   const [code, setCodeState] = useState<string | null>(initialCode)
   const [state, setState] = useState<TabletState>(INITIAL)
@@ -69,14 +70,21 @@ export default function TabletApp() {
         cameraError={cameraError}
         status={<ConnectionBadge status={status} code={code} />}
         onSelect={(index) => { if (status === "connected") send({ type: "select", index }) }}
-        sign={state.recognize && stream && (
-          <SignPanel
-            stream={stream}
-            recognize={state.recognize}
-            seq={state.seq}
-            onSign={(r) => { if (status === "connected") send({ type: "sign", seq: state.seq, task: "number", value: r.value, confidence: r.confidence, alternatives: r.alternatives }) }}
-          />
-        )}
+        sign={state.recognize && stream && (state.recognize.task === "tramite"
+          ? (
+            <IntentPanel
+              stream={stream}
+              seq={state.seq}
+              onSign={(r) => { if (status === "connected") send({ type: "sign", seq: state.seq, task: "tramite", ...r }) }}
+            />
+          ) : (
+            <SignPanel
+              stream={stream}
+              recognize={state.recognize}
+              seq={state.seq}
+              onSign={(r) => { if (status === "connected") send({ type: "sign", seq: state.seq, task: "number", value: r.value, confidence: r.confidence, alternatives: r.alternatives }) }}
+            />
+          ))}
       />
       {status !== "connected" && <ConnectionOverlay status={status} code={code} onRetry={retry} onChangeCode={() => setCode(null)} />}
       {!started && (

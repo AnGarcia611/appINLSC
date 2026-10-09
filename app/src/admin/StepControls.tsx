@@ -7,7 +7,7 @@ import Icon from "../shared/Icon"
 import { ConfidenceBar, Msg } from "./widgets"
 
 /** Controles del funcionario para el paso actual del trámite. */
-export default function StepControls({ session: s, actions: a, signNumbers = false }: { session: Session; actions: SessionActions; signNumbers?: boolean }) {
+export default function StepControls({ session: s, actions: a, signNumbers = false, signIntent = false }: { session: Session; actions: SessionActions; signNumbers?: boolean; signIntent?: boolean }) {
   const step = currentStep(s)
   const color = s.path?.color ?? "var(--blue)"
   const tag = `INLSC · PASO ${s.index + 1} DE ${stepsOf(s).length}${s.path ? "" : "+"} · ${step.label.toUpperCase()}`
@@ -23,7 +23,7 @@ export default function StepControls({ session: s, actions: a, signNumbers = fal
       return <><Msg tag={tag}>{step.hint}</Msg>{nextButton}</>
 
     case "detect":
-      return <DetectControls s={s} a={a} tag={tag} />
+      return <DetectControls s={s} a={a} tag={tag} signIntent={signIntent} />
 
     case "especialidad":
       return (
@@ -86,24 +86,50 @@ export default function StepControls({ session: s, actions: a, signNumbers = fal
   }
 }
 
-function DetectControls({ s, a, tag }: { s: Session; a: SessionActions; tag: string }) {
+function DetectControls({ s, a, tag, signIntent }: { s: Session; a: SessionActions; tag: string; signIntent: boolean }) {
   const [scripted, setScripted] = useState(0)
-  const { status, intent, confidence } = s.detect
+  const { status, intent, confidence, source } = s.detect
   const path = PATHS[intent]
+
+  const simulate = (
+    <>
+      <label className="field">
+        Servicio que solicita el señante
+        <select value={scripted} onChange={(e) => setScripted(Number(e.target.value))}>
+          {PATHS.map((p, i) => <option key={p.id} value={i}>{p.name}</option>)}
+        </select>
+      </label>
+      <button className="btn primary" onClick={() => a.simulateDetection(scripted, false)}><Icon name="play_arrow" fill /> Simular reconocimiento</button>
+      <button className="btn ghost sm" onClick={() => a.simulateDetection(scripted, true)}>Simular confianza baja</button>
+    </>
+  )
+
+  // Con la cámara: se espera la seña; la simulación queda plegada para demos sin cámara o si la seña no se reconoce.
+  if (status === "waiting" && signIntent) return (
+    <>
+      <Msg tag={tag}>Cámara activa en la tablet. Esperando que el señante haga la seña de su solicitud…</Msg>
+      <p className="waiting"><Icon name="hourglass_top" /> El resultado aparece aquí apenas la tablet reconozca la seña (unos 2–4 s).</p>
+      <p className="label">Si no se reconoce, elija el trámite:</p>
+      <div className="intent-list">
+        {PATHS.map((p, i) => (
+          <button key={p.id} className="intent" style={{ "--c": p.color } as React.CSSProperties} onClick={() => { a.chooseIntent(i); a.confirmIntent() }}>
+            <Icon name={p.icon} /> {p.name}
+          </button>
+        ))}
+      </div>
+      <details className="demo-box">
+        <summary className="demo-title"><Icon name="medical_services" /> Simular sin cámara</summary>
+        {simulate}
+      </details>
+    </>
+  )
 
   if (status === "waiting") return (
     <>
       <Msg tag={tag}>Cámara activa en la tablet. El señante hace la seña de su solicitud.</Msg>
       <div className="demo-box">
         <div className="demo-title"><Icon name="medical_services" /> Servicios básicos de salud</div>
-        <label className="field">
-          Servicio que solicita el señante
-          <select value={scripted} onChange={(e) => setScripted(Number(e.target.value))}>
-            {PATHS.map((p, i) => <option key={p.id} value={i}>{p.name}</option>)}
-          </select>
-        </label>
-        <button className="btn primary" onClick={() => a.simulateDetection(scripted, false)}><Icon name="play_arrow" fill /> Simular reconocimiento</button>
-        <button className="btn ghost sm" onClick={() => a.simulateDetection(scripted, true)}>Simular confianza baja</button>
+        {simulate}
       </div>
     </>
   )
@@ -120,7 +146,7 @@ function DetectControls({ s, a, tag }: { s: Session; a: SessionActions; tag: str
     <>
       <div className="detected" style={{ borderColor: path.color }}>
         <Icon name={path.icon} />
-        <div><strong>{path.name}</strong><em>Seña LSC interpretada</em></div>
+        <div><strong>{path.name}</strong><em>{source === "seña" ? "Seña LSC reconocida en la tablet" : "Seña LSC interpretada (simulación)"}</em></div>
       </div>
       <ConfidenceBar value={confidence} animating={false} label="Precisión de interpretación LSC" />
       {low && <Msg tag="VALIDACIÓN REQUERIDA" tone="warn">La intención no se reconoció con suficiente confianza. Repita la seña o confirme el trámite manualmente.</Msg>}
