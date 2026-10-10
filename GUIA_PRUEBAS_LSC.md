@@ -172,13 +172,13 @@ Verifique la licencia en la descripción del video y anote la cita (el paquete y
 
 Prueba la integración real: el señante hace la seña en la tablet y el funcionario la ve en el panel.
 
-> La seña del número está **apagada por defecto**, porque en Ajustes1 se pidió que en las elecciones el señante solo toque. Hay que activarla a mano.
+> La seña del número está **encendida por defecto** (desde el 10-oct-2026), en el trámite (1, 2, 3) y en las infografías. Para que el señante solo toque, elija **Solo toque** en el panel antes de iniciar la atención.
 
 ### 2.1 Preparar
 
 1. En el computador abra **https://localhost:5173/**.
 2. En la ventanita "¿Necesita ayuda?" pulse **Conectar tablet**. Se abre el panel con el QR.
-3. En el panel, en **Elegir opciones con la seña del número**, elija **Toque o seña del número**.
+3. En el panel, en **Elegir opciones con la seña del número**, verifique que esté en **Toque o seña del número** (es lo predeterminado).
    - Debajo del panel debe decir: `MODO DEMO · trámite simulado · seña del número real (beta)`.
 4. En la tablet, **escanee el QR**. Acepte el aviso del certificado.
 5. En la tablet, **toque la pantalla** y **permita la cámara**.
