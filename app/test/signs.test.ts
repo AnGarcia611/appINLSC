@@ -3,8 +3,9 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { PACKAGE_FORMAT, PACKAGE_VERSION, decodeFrame, encodeFrame, type CapturePackage, type Take } from "../src/capture/format.ts"
 import { WindowPool, buildSignTemplates, signLabel } from "../src/capture/dataset.ts"
-import { foldOf, makePersona, mirrorFrame, reshapeHand, rng, simulate, varyTake } from "../src/capture/synth.ts"
-import { jointAngles } from "../src/vision/features.ts"
+import { curlFingers, flexTake, foldOf, makePersona, mirrorFrame, reshapeHand, rng, simulate, varyTake } from "../src/capture/synth.ts"
+import { fingerExtension, jointAngles } from "../src/vision/features.ts"
+import { NumberRecognizer } from "../src/vision/numbers.ts"
 import { INTENT_LABELS, SignRecognizer } from "../src/vision/signs.ts"
 import { dtw } from "../src/vision/dtw.ts"
 import type { Frame } from "../src/vision/types.ts"
@@ -115,4 +116,55 @@ test("reconocedor de trámites: reconoce las señas entrenadas (variantes nuevas
   assert.equal(c[0]?.value, "cancelar", JSON.stringify(c))
   assert.equal(run(moving(circle, SHAPES[1], 70)).length, 0, "otra seña")
   assert.equal(run(sequence(80, () => null)).length, 0, "sin manos")
+})
+
+/** Toma de un número quieto: entra la mano, sostiene la forma 1.5 s y baja (20 fps). */
+function staticNumber(n: number, seed = 1): Take {
+  const frames = [
+    ...sequence(4, () => null),
+    ...sequence(30, () => hand(SHAPES[n], { jitter: 0.001, seed }), 200),
+    ...sequence(8, () => null, 1700),
+  ]
+  return { ...take(`num-${n}`, frames, `num-${n}-${seed}`), label: String(n) }
+}
+
+function lastNumber(t: Take): number | undefined {
+  const r = new NumberRecognizer()
+  const out = t.frames.map(decodeFrame).map((f) => r.push(f)).filter((x) => !!x)
+  return out[out.length - 1]?.value
+}
+
+test("doblar los dedos: solo los de la base, hacia la palma, sin cambiar el largo de los huesos", () => {
+  const p = hand(SHAPES[2])
+  const bent = curlFingers(p, [1, 2], 0.8, 16 / 9)
+  const before = fingerExtension(p), after = fingerExtension(bent)
+  assert.ok(after[1] < 0.35 && after[2] < 0.35, `índice y medio doblados: ${after.map((x) => x.toFixed(2))}`)
+  for (const i of [0, 3, 4]) assert.ok(Math.abs(after[i] - before[i]) < 0.02, `dedo ${i} sin cambios`)
+  const len = (q: typeof p, a: number, b: number) => Math.hypot((q[a].x - q[b].x) * 16 / 9, q[a].y - q[b].y, (q[a].z - q[b].z) * 16 / 9)
+  for (const [a, b] of [[5, 6], [6, 7], [7, 8], [9, 10]]) assert.ok(Math.abs(len(bent, a, b) - len(p, a, b)) < 1e-9)
+})
+
+test("6–9 fabricados desde 1–4: se reconocen como el número con movimiento y guardan su toma de origen", () => {
+  for (const n of [1, 2, 3, 4]) {
+    const src = staticNumber(n)
+    assert.equal(lastNumber(src), n)
+    for (const depth of [1, 0.5]) {
+      const f = flexTake(src, { cycles: 3, hz: 2, depth, lead: 0.1 }, 16 / 9)
+      assert.ok(f, `sin tramo para ${n}`)
+      assert.equal(f.label, String(n + 5))
+      assert.equal(f.task, `num-${n + 5}`)
+      assert.equal(f.source, src.id)
+      assert.equal(lastNumber(f), n + 5, `profundidad ${depth}`)
+    }
+  }
+  // El 5 no tiene versión con movimiento.
+  assert.equal(flexTake(staticNumber(5), { cycles: 2, hz: 2, depth: 1, lead: 0 }, 16 / 9), null)
+})
+
+test("simulación: incluye 6–9 fabricados desde 1–4, en el grupo de su toma de origen", () => {
+  const src = staticNumber(2)
+  const sims = [...simulate([pkg([src])], { personas: 6, seed: 3 })]
+  const fab = sims.flatMap((s) => s.takes).filter((t) => t.label === "7")
+  assert.ok(fab.length > 0, "ninguna variante fabricada")
+  for (const t of fab) assert.equal(foldOf(t, 5), foldOf(src, 5))
 })

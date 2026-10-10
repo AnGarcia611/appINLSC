@@ -45,6 +45,11 @@ export function loadPackages(dir: string, quiet = false): CapturePackage[] {
   return ok.map((x) => x.pkg)
 }
 
+/** Paquetes de varias carpetas (p. ej. las grabaciones propias y un dataset público importado). */
+export function loadFolders(dirs: string[]): CapturePackage[] {
+  return dirs.flatMap((d) => { console.log(`· ${d}`); return loadPackages(d) })
+}
+
 /** Valor de una opción `--nombre valor` de la línea de comandos. */
 export function option(name: string, fallback: number): number {
   const i = process.argv.indexOf(`--${name}`)

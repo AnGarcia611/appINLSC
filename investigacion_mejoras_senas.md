@@ -49,3 +49,44 @@ Investigación del 10-oct-2026. Complementa `investigacion_reconocimiento_LSC.md
 3. **Sintetizar 6–9 desde las tomas de 1–4** en `synth.ts`, y agregar los aumentos de tapar tiempo y dedos.
 4. **Grabar al menos 5 señantes sordos con `/?captura`,** sobre todo 6–9 y trámites. Ningún dato sintético reemplaza esto.
 5. **Con al menos 5 señantes:** probar una 1D-CNN pequeña exportada a ONNX. Descartar el video generado y los avatares para entrenar.
+
+## Resultados (10-oct-2026)
+
+Lo que se hizo de las prioridades 1–3, más la investigación de manos 3D (`investigacion_manos_3d.md`).
+
+**Datos públicos usados: LSC-54, números.** El archivo `Videos Numbers.zip` (190 MB) trae 542 videos de 18 señantes, no 22 como dice el artículo.
+- `app/scripts/importar_lsc54.py` saca los puntos con los mismos modelos que la app. Como los videos son de cuerpo entero y de lejos, recorta a cada persona con el encuadre de la tablet.
+- Los datos van a `~/inlsc-publicos`, fuera del repo. Licencia CC BY-NC 4.0.
+- **LSC70 y LSC50 no se descargaron:**
+  - LSC70 tiene solo 6 fotos por seña, sin movimiento.
+  - LSC50 no tiene números.
+
+**Medición con personas nuevas** (LSC-54, 372 tomas con la seña visible al menos 0.3 s):
+
+| Detector | 1–5 | 6–9 | Forma correcta cuando responde |
+|---|---|---|---|
+| Original | 83 % | 51 % | 98 % |
+| Nuevo | 80 % | 58 % | 98 % |
+
+- **La forma de la mano generaliza bien entre personas.** El problema es distinguir quieto de movimiento, y las señas muy rápidas: los clips de LSC-54 duran unos 2 s y la mano se ve 0.3–0.7 s.
+- **Entrenar con LSC-54 casi no cambió nada:** números 53 → 54 %, y los disparos falsos de trámites subieron de 1 a 4 de 128. **Por eso las plantillas publicadas siguen saliendo solo de las capturas propias.** Si se entrena con datos públicos, el script los cita en las plantillas.
+
+**6–9 fabricados y nuevo detector de flexión:**
+
+| | Original | Nuevo |
+|---|---|---|
+| 6–9 fabricados, flexión a medias (35–55 %) | 8 % | 56 % |
+| 6–9 fabricados, flexión media (55–75 %) | 47 % | 85 % |
+| 6–9 fabricados, flexión completa | 85 % | 90 % |
+| Tomas propias 1–9 | 96 % | 96 % |
+| Disparos falsos con otras señas propias | 39/65 | 38/65 |
+
+Lo que cambió en el detector:
+- Cuenta las bajadas y subidas desde el último pico y valle, en vez de usar umbrales fijos.
+- Exige que la forma se sostenga 2 fotogramas antes de la primera bajada. Así ya no se lee como flexión la mano que entra a medio abrir (un 2 y un 4 reales se leían como 7 y 9).
+- El vaivén del índice (el NO) solo cuenta con el índice estirado.
+- La seña de número termina tras 0.5 s sin mano, antes 0.35 s, porque el detector pierde la mano en las flexiones rápidas.
+
+**Falta:**
+- **Grabar señantes sordos con `/?captura`, sobre todo 6–9 sostenidos y repetidos.** Es lo único que puede subir de verdad el 58 %.
+- **Las personas por edad del plan de manos 3D.**
