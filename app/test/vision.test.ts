@@ -82,6 +82,26 @@ test("números con movimiento 6–9: la flexión repetida suma 5", () => {
   }
 })
 
+test("flexión a medias (los dedos bajan solo hasta la mitad) también cuenta como 6–9", () => {
+  for (const base of [1, 2, 3, 4]) {
+    const shape = SHAPES[base]
+    const half = shape.map((v, i) => (i > 0 && v === 0 ? 0.45 : v)) as Curl
+    const seq: (Point[] | null)[] = [...Array(6).fill(null), ...Array(8).fill(hand(shape))]
+    for (let c = 0; c < 3; c++) for (let i = 0; i < 10; i++) seq.push(hand(mix(shape, half, Math.sin((i / 10) * Math.PI))))
+    seq.push(...Array(3).fill(hand(shape)), ...Array(12).fill(null))
+    const out = run(sequence(seq.length, (i) => seq[i]))
+    assert.equal(out[out.length - 1]?.value, base + 5, `esperado ${base + 5}: ${JSON.stringify(out)}`)
+  }
+})
+
+test("la mano que entra a medio abrir, se cierra y se abre no es una flexión", () => {
+  // Captura S-9BST: un 2 y un 4 que entraban así se leían como 7 y 9.
+  const shape = SHAPES[2]
+  const seq: (Point[] | null)[] = [...Array(6).fill(null), hand(mix(SHAPES[0], shape, 0.85)), hand(mix(SHAPES[0], shape, 0.3)), ...Array(24).fill(hand(shape)), ...Array(12).fill(null)]
+  const out = run(sequence(seq.length, (i) => seq[i]))
+  assert.deepEqual(out.map((r) => r.value), [2])
+})
+
 test("un solo ciclo de flexión cuenta como movimiento al bajar la mano", () => {
   const out = run(sign(2, 1))
   assert.equal(out[out.length - 1]?.value, 7, JSON.stringify(out))

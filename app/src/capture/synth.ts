@@ -4,7 +4,7 @@
 // Funciones puras con semilla: el mismo paquete y la misma semilla dan siempre el mismo resultado.
 //
 // Límite: se simula cómo varía una toma, no cómo señan otras personas. La evaluación final se hace con tomas reales.
-import { dominantHand, fingerExtension } from "../vision/features.ts"
+import { dominantHand, fingerExtension, isRaised } from "../vision/features.ts"
 import { POSE, type Frame, type HandObs, type Point } from "../vision/types.ts"
 import { decodeFrame, encodeFrame, type CapturePackage, type Take } from "./format.ts"
 
@@ -37,8 +37,11 @@ function gauss(r: Rng): number {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r())
 }
 
-/** Grupo (0..k-1) de una toma real. Las variantes de una toma van siempre al grupo de su toma de origen. */
-export const foldOf = (take: Pick<Take, "id" | "source">, k: number) => hashSeed(take.source ?? take.id) % k
+/**
+ * Grupo (0..k-1) de una toma real. Las variantes de una toma van siempre al grupo de su toma de origen,
+ * y las tomas con `group` (el señante, en datos públicos) van todas al mismo grupo.
+ */
+export const foldOf = (take: Pick<Take, "id" | "source" | "group">, k: number) => hashSeed(take.group ?? take.source ?? take.id) % k
 
 // ── Personas y variaciones ──
 
@@ -152,20 +155,22 @@ export function reshapeHand(points: Point[], p: Persona, aspect: number): Point[
   return out.map((q) => fromIso(q, aspect))
 }
 
+const sub = (a: Iso, b: Iso): Iso => ({ X: a.X - b.X, Y: a.Y - b.Y, Z: a.Z - b.Z })
+const cross = (a: Iso, b: Iso): Iso => ({ X: a.Y * b.Z - a.Z * b.Y, Y: a.Z * b.X - a.X * b.Z, Z: a.X * b.Y - a.Y * b.X })
+const dot = (a: Iso, b: Iso) => a.X * b.X + a.Y * b.Y + a.Z * b.Z
+const unit = (a: Iso): Iso | null => { const l = Math.hypot(a.X, a.Y, a.Z); return l ? { X: a.X / l, Y: a.Y / l, Z: a.Z / l } : null }
+/** Rodrigues: v cos a + (n × v) sin a + n (n·v)(1 − cos a). `n` unitario. */
+function rotate(v: Iso, n: Iso, a: number): Iso {
+  const c = Math.cos(a), s = Math.sin(a), d = dot(n, v)
+  const k = cross(n, v)
+  return { X: v.X * c + k.X * s + n.X * d * (1 - c), Y: v.Y * c + k.Y * s + n.Y * d * (1 - c), Z: v.Z * c + k.Z * s + n.Z * d * (1 - c) }
+}
+
 /** Gira el pulgar (puntos 2–4) sobre su base, en el plano de la palma; positivo = hacia el índice. */
 function rotateThumb(h: Iso[], angle: number) {
-  const sub = (a: Iso, b: Iso): Iso => ({ X: a.X - b.X, Y: a.Y - b.Y, Z: a.Z - b.Z })
-  const cross = (a: Iso, b: Iso): Iso => ({ X: a.Y * b.Z - a.Z * b.Y, Y: a.Z * b.X - a.X * b.Z, Z: a.X * b.Y - a.Y * b.X })
-  const n0 = cross(sub(h[5], h[0]), sub(h[17], h[0]))
-  const len = Math.hypot(n0.X, n0.Y, n0.Z)
-  if (!len) return
-  const n = { X: n0.X / len, Y: n0.Y / len, Z: n0.Z / len }
-  const rot = (v: Iso, a: number): Iso => {
-    // Rodrigues: v cos a + (n × v) sin a + n (n·v)(1 − cos a)
-    const c = Math.cos(a), s = Math.sin(a), d = n.X * v.X + n.Y * v.Y + n.Z * v.Z
-    const k = cross(n, v)
-    return { X: v.X * c + k.X * s + n.X * d * (1 - c), Y: v.Y * c + k.Y * s + n.Y * d * (1 - c), Z: v.Z * c + k.Z * s + n.Z * d * (1 - c) }
-  }
+  const n = unit(cross(sub(h[5], h[0]), sub(h[17], h[0])))
+  if (!n) return
+  const rot = (v: Iso, a: number) => rotate(v, n, a)
   const pivot = h[1]
   const tipAfter = (a: number) => { const t = rot(sub(h[4], pivot), a); return Math.hypot(pivot.X + t.X - h[5].X, pivot.Y + t.Y - h[5].Y, pivot.Z + t.Z - h[5].Z) }
   // El sentido "hacia el índice" depende de la mano (izquierda o derecha): se elige el que acerca la punta al índice.
@@ -297,6 +302,107 @@ function repeatCycle(frames: Frame[], base: number): Frame[] {
   return frames
 }
 
+// ── 6–9 fabricados desde 1–4 ──
+
+/** Dedos que se flexionan en 6–9 según la base (sin el pulgar) y sus puntos: articulación MCP, PIP, DIP y punta. */
+const FLEX_BASE: Record<number, number[]> = { 1: [1], 2: [1, 2], 3: [1, 2, 3], 4: [1, 2, 3, 4] }
+const FINGER_POINTS = (f: number) => [f * 4 + 1, f * 4 + 2, f * 4 + 3, f * 4 + 4]
+/** Reparto de la flexión entre MCP, PIP y DIP (la PIP es la que más se dobla en una flexión rápida). */
+const CURL_SHARE = [0.4, 0.4, 0.2]
+
+/**
+ * Dobla los dedos `fingers` una fracción `k` (0 = como están, 1 = cerrados del todo, ≈ 2.7 rad entre las tres articulaciones).
+ * El giro es alrededor del eje transversal de la palma (índice → meñique), hacia el lado de la palma: el lado donde
+ * están las puntas de los dedos que ya están doblados (o el pulgar, en el 4).
+ */
+export function curlFingers(points: Point[], fingers: number[], k: number, aspect: number): Point[] {
+  if (k <= 0) return points
+  const h = points.map((q) => toIso(q, aspect))
+  const axis = unit(sub(h[17], h[5]))
+  const normal = unit(cross(sub(h[5], h[0]), sub(h[17], h[0])))
+  if (!axis || !normal) return points
+  const folded = [1, 2, 3, 4].filter((f) => !fingers.includes(f)).map((f) => f * 4 + 4)
+  const refs = folded.length ? folded : [4]
+  const ref = refs.reduce((a, i) => ({ X: a.X + h[i].X / refs.length, Y: a.Y + h[i].Y / refs.length, Z: a.Z + h[i].Z / refs.length }), { X: 0, Y: 0, Z: 0 })
+  const palmSide = Math.sign(dot(sub(ref, h[0]), normal)) || 1
+  for (const f of fingers) {
+    const chain = FINGER_POINTS(f)
+    // El sentido del giro es el que acerca la punta al lado de la palma.
+    const tip = sub(h[chain[3]], h[chain[0]])
+    const probe = (a: number) => dot(rotate(tip, axis, a), normal) * palmSide
+    const dir = probe(0.3) > probe(-0.3) ? 1 : -1
+    for (let j = 0; j < 3; j++) {
+      const pivot = h[chain[j]]
+      const a = dir * k * 2.7 * CURL_SHARE[j]
+      for (const i of chain.slice(j + 1)) {
+        const v = rotate(sub(h[i], pivot), axis, a)
+        h[i] = { X: pivot.X + v.X, Y: pivot.Y + v.Y, Z: pivot.Z + v.Z }
+      }
+    }
+  }
+  return h.map((q, i) => fromIso(q, aspect, points[i].v))
+}
+
+/** Extensión media de los dedos de la base para considerar que la forma de 1–4 ya está hecha. */
+const FORMED = 0.8
+
+export interface FlexStyle {
+  /** Ciclos de flexión completos. */
+  cycles: number
+  /** Ciclos por segundo. */
+  hz: number
+  /** Hasta dónde se doblan (fracción de cerrar del todo): 0.45 = flexión a medias. */
+  depth: number
+  /** Retraso antes del primer ciclo, en fracción del tramo quieto. */
+  lead: number
+}
+
+export function makeFlexStyle(r: Rng): FlexStyle {
+  // "Varias veces": casi siempre 2–4 ciclos; a veces uno solo (seña apurada).
+  return { cycles: r() < 0.15 ? 1 : 2 + Math.floor(r() * 3), hz: between(r, 1.4, 3.6), depth: between(r, 0.45, 1), lead: between(r, 0, 0.3) }
+}
+
+/**
+ * 6–9 a partir de una toma real de 1–4: en el tramo con la mano levantada se doblan y estiran los dedos de la base
+ * `style.cycles` veces. Si el tramo no alcanza, se alarga repitiendo su último fotograma (la persona sostiene la mano).
+ * Devuelve null si la toma no tiene un tramo con la mano levantada.
+ */
+export function flexTake(take: Take, style: FlexStyle, aspect: number, id = `${take.id}~flex`): Take | null {
+  const base = Number(take.label)
+  const fingers = FLEX_BASE[base]
+  if (!fingers) return null
+  const frames = take.frames.map(decodeFrame)
+  // Tramo con la forma ya hecha: mano levantada y dedos de la base estirados (la mano suele subir cerrada).
+  const formed = frames.map((f) => {
+    const h = dominantHand(f)
+    if (!h || !isRaised(h, f.pose)) return false
+    const ext = fingerExtension(h.points)
+    return fingers.reduce((a, i) => a + ext[i], 0) / fingers.length >= FORMED
+  })
+  const first = formed.indexOf(true), last = formed.lastIndexOf(true)
+  if (first < 0 || last - first < 3) return null
+  const t0 = frames[first].t + (frames[last].t - frames[first].t) * style.lead
+  const need = (style.cycles / style.hz) * 1000
+  const tEnd = t0 + need
+  // Alargar el tramo levantado si hace falta: se repite el último fotograma con mano y se corre lo que sigue.
+  let out = frames
+  const lack = tEnd - frames[last].t
+  if (lack > 0) {
+    const step = frames.length > 1 ? (frames[frames.length - 1].t - frames[0].t) / (frames.length - 1) : 70
+    const extra = Array.from({ length: Math.ceil(lack / step) }, (_, i) => ({ ...frames[last], t: frames[last].t + (i + 1) * step }))
+    const shift = extra.length * step
+    out = [...frames.slice(0, last + 1), ...extra, ...frames.slice(last + 1).map((f) => ({ ...f, t: f.t + shift }))]
+  }
+  const curled = out.map((f) => {
+    if (f.t < t0 || f.t > tEnd) return f
+    const k = style.depth * (1 - Math.cos(2 * Math.PI * style.hz * ((f.t - t0) / 1000))) / 2
+    const h = dominantHand(f)
+    return h ? { ...f, hands: f.hands.map((x) => (x === h ? { ...x, points: curlFingers(x.points, fingers, k, aspect) } : x)) } : f
+  })
+  const n = base + 5
+  return finishTake({ ...take, id, task: `num-${n}`, label: String(n), source: take.source ?? take.id }, curled)
+}
+
 // ── Ruido del detector ──
 
 function noisy(frames: Frame[], v: Variation, r: Rng): Frame[] {
@@ -399,6 +505,12 @@ export interface SimulateOptions {
   purpose?: "training" | "evaluation"
 }
 
+/** Los paquetes de datasets públicos se simulan con 1 de cada PUBLIC_SHARE personas. */
+const PUBLIC_SHARE = 6
+
+/** Fracción de tomas de 1–4 que además se convierten en 6–9 por persona simulada. */
+const FLEX_SHARE = 0.5
+
 /** Tareas que se simulan como "otra" al revés: señas con movimiento propio. */
 const REVERSIBLE = new Set(["tramite-asignar", "tramite-cancelar", "tramite-facturar", "si-mano", "no-indice"])
 
@@ -414,9 +526,17 @@ export function* simulate(packages: CapturePackage[], opts: SimulateOptions): Ge
     const r = rng(hashSeed(`${opts.seed}:${pid}`))
     const persona = makePersona(r, pid)
     for (const pkg of sources) {
+      // Los datasets públicos ya traen muchas personas reales: basta con menos variantes simuladas.
+      if (pkg.origin && k >= Math.ceil(opts.personas / PUBLIC_SHARE)) continue
       const aspect = aspectOf(pkg)
       const takes = pkg.takes.filter((t) => !opts.filter || opts.filter(t))
       const out = takes.map((t) => varyTake(t, persona, r, aspect))
+      // 6–9 fabricados: la mitad de las tomas de 1–4 también se doblan y estiran, con otro ritmo y profundidad.
+      for (const t of takes) {
+        if (!FLEX_BASE[Number(t.label)] || !t.task.startsWith("num-") || r() >= FLEX_SHARE) continue
+        const f = flexTake(t, makeFlexStyle(r), aspect)
+        if (f) out.push(varyTake(f, persona, r, aspect))
+      }
       // Negativos: 1 de cada 4 tomas con movimiento propio va también al revés; y movimientos sin seña.
       for (const t of takes) {
         if (REVERSIBLE.has(t.task) && r() < 0.25) out.push(varyTake(reversedTake(t, `${t.id}~rev`), persona, r, aspect))
