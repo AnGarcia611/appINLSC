@@ -36,6 +36,22 @@
 .lab-bar b { font-variant-numeric: tabular-nums; text-align: right; }
 .lab-log { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow: auto; }
 .lab-log time { color: #9fb2c6; font-size: 12px; }
+.lab-log li.ok { color: #7ee2a8; }
+.lab-log li.bad { color: #ff9a8f; }
+.lab-bar.muted i { background: #6b7f94; }
+.lab-stats small { font-weight: 400; color: #9fb2c6; font-size: 11px; }
+.lab-main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.lab-test { background: #142131; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.lab-test h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: #9fb2c6; }
+.lab-test-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.lab-test-head span { flex: 1; color: #c9d6e3; font-size: 14px; }
+.lab-test button { background: #1d2b3a; color: #e8eef5; border: 1px solid #2b3d50; border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 14px; cursor: pointer; }
+.lab-test button.on { background: var(--blue, #145da0); border-color: #4c8fd4; }
+.lab-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.lab-chips small { width: 100%; color: #9fb2c6; font-size: 12px; }
+.lab-chips em { margin-left: 6px; font-style: normal; font-size: 12px; font-weight: 700; padding: 1px 6px; border-radius: 999px; }
+.lab-chips em.good { background: #1f6b43; } .lab-chips em.mid { background: #7a5b12; } .lab-chips em.bad { background: #7d2a24; }
+.lab-ref { margin: 0; font-size: 14px; color: #c9d6e3; }
 @media (max-width: 760px) { .lab-body { grid-template-columns: 1fr; } }
 
 /* Aviso en el emparejamiento del panel cuando el servidor no usa HTTPS. */

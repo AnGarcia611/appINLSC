@@ -74,6 +74,8 @@ export class SignRecognizer {
   phase: SignPhase = "reposo"
   /** Última comparación (para la vista de diagnóstico). */
   live: { label: string; confidence: number } | null = null
+  /** Puntaje de cada etiqueta en la última comparación, incluidas las de rechazo (vista de diagnóstico). */
+  liveScores: Map<string, number> | null = null
   private readonly opts: Required<Omit<SignRecognizerOptions, "aspect">>
   private readonly track: MotionTrack
   private readonly segmenter = new Segmenter({ restMs: 500, minMs: 600 })
@@ -87,7 +89,7 @@ export class SignRecognizer {
     this.track = new MotionTrack(opts.aspect ?? 16 / 9)
   }
 
-  reset() { this.track.reset(); this.segmenter.reset(); this.history = []; this.emitted = false; this.phase = "reposo"; this.live = null }
+  reset() { this.track.reset(); this.segmenter.reset(); this.history = []; this.emitted = false; this.phase = "reposo"; this.live = null; this.liveScores = null }
 
   push(frame: Frame): SeqResult | null {
     this.track.push(frame)
@@ -98,7 +100,7 @@ export class SignRecognizer {
       const elapsed = event.durationMs
       let result: SeqResult | null = null
       if (!done && elapsed >= this.opts.minMs * 0.8) { this.evaluate(elapsed); result = this.decide() }
-      this.history = []; this.emitted = false; this.phase = "reposo"; this.live = null
+      this.history = []; this.emitted = false; this.phase = "reposo"; this.live = null; this.liveScores = null
       return result
     }
     if (!this.segmenter.active || this.emitted) return null
@@ -124,6 +126,7 @@ export class SignRecognizer {
     const { scores } = classifyWindow(this.track.window(ms), this.opts.templates)
     this.history.push(scores)
     if (this.history.length > 8) this.history.shift()
+    this.liveScores = scores
     const b = best(scores)
     this.live = b.label ? { label: b.label, confidence: Math.round(b.score * 100) } : null
   }

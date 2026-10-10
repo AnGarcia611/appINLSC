@@ -204,6 +204,13 @@ export class NumberRecognizer {
     return this.emit(this.staticResult(base, recent), base, "estático")
   }
 
+  /** Lo que el reconocedor ve en la ventana actual (vista de diagnóstico de 6–9 y del rechazo). */
+  diagnostics(): { base: number; cycles: number; swings: number; other: boolean } | null {
+    if (!this.buffer.length) return null
+    const dom = dominantBase(this.buffer)
+    return { base: dom?.base ?? 0, cycles: dom ? flexCycles(this.buffer, dom.base) : 0, swings: wagSwings(this.buffer), other: looksLikeOtherSign(this.buffer) }
+  }
+
   private emit(r: NumberResult | null, base: number, kind: NumberResult["kind"]): NumberResult | null {
     if (!r) return null
     this.emitted = { base, kind }
