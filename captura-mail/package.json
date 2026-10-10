@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
   "description": "Recibe los paquetes de /?captura y los reenvía por correo (Cloudflare Worker + Email Routing).",
   "scripts": {
     "dev": "wrangler dev",

@@ -1,0 +1,41 @@
+# Pruebas en cada pull request (el despliegue, deploy.yml, solo corre en main).
+name: Pruebas
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  captura-mail:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: captura-mail
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: captura-mail/package-lock.json
+      - run: npm ci
+      - run: npm test
