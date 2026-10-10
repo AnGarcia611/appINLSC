@@ -22,7 +22,7 @@ export default function StepControls({ session: s, actions: a, signNumbers = fal
       return <><Msg tag={tag}>{step.hint}</Msg>{nextButton}</>
 
     case "detect":
-      return <DetectControls s={s} a={a} tag={tag} />
+      return <DetectControls s={s} a={a} tag={tag} signNumbers={signNumbers} />
 
     case "especialidad":
       return (
@@ -85,42 +85,50 @@ export default function StepControls({ session: s, actions: a, signNumbers = fal
   }
 }
 
-/** Detección del trámite: el señante hace la seña o toca su opción en la tablet; el funcionario confirma o corrige. */
-function DetectControls({ s, a, tag }: { s: Session; a: SessionActions; tag: string }) {
+/**
+ * Detección del trámite: el señante hace la seña de su solicitud, la seña del número de la opción (si está activada)
+ * o toca su opción en la tablet; el funcionario confirma o corrige.
+ */
+function DetectControls({ s, a, tag, signNumbers }: { s: Session; a: SessionActions; tag: string; signNumbers: boolean }) {
   const { status, intent, confidence, source } = s.detect
   const path = PATHS[intent]
 
   if (status === "waiting") return (
     <>
-      <Msg tag={tag}>Cámara activa en la tablet. El señante hace la seña de su solicitud o toca su opción.</Msg>
+      <Msg tag={tag}>
+        Cámara activa en la tablet. El señante hace la seña de su solicitud{signNumbers ? ", la seña del número (1, 2 o 3)" : ""} o toca su opción.
+      </Msg>
       <p className="waiting"><Icon name="hourglass_top" /> El trámite aparece aquí apenas la tablet reconozca la seña (unos 2–4 s) o el señante toque una opción.</p>
       <p className="label">Si no se reconoce, elija el trámite:</p>
       <div className="intent-list">
         {PATHS.map((p, i) => (
           <button key={p.id} className="intent" style={{ "--c": p.color } as React.CSSProperties} onClick={() => { a.chooseIntent(i); a.confirmIntent() }}>
-            <Icon name={p.icon} /> {p.name}
+            <Icon name={p.icon} /> {i + 1} · {p.name}
           </button>
         ))}
       </div>
     </>
   )
 
-  const bySign = source === "seña"
+  const bySign = source === "seña" || source === "número"
   const low = bySign && confidence < 70
+  const how = source === "seña" ? "Seña LSC reconocida en la tablet"
+    : source === "número" ? `Seña del número ${intent + 1} reconocida en la tablet`
+    : "Elegido en la pantalla táctil"
   return (
     <>
       <div className="detected" style={{ borderColor: path.color }}>
         <Icon name={path.icon} />
-        <div><strong>{path.name}</strong><em>{bySign ? "Seña LSC reconocida en la tablet" : "Elegido en la pantalla táctil"}</em></div>
+        <div><strong>{intent + 1} · {path.name}</strong><em>{how}</em></div>
       </div>
-      {bySign && <ConfidenceBar value={confidence} label="Precisión de interpretación LSC" />}
+      {bySign && <ConfidenceBar value={confidence} label={source === "número" ? "Precisión de la seña del número" : "Precisión de interpretación LSC"} />}
       {low && <Msg tag="VALIDACIÓN REQUERIDA" tone="warn">La seña no se reconoció con suficiente confianza. Pida repetirla o confirme el trámite con el señante.</Msg>}
       <button className="btn warn-ghost" onClick={a.retryDetection}><Icon name="restart_alt" /> Volver a captar seña</button>
       <p className="label">O corrija el trámite:</p>
       <div className="intent-list">
         {PATHS.map((p, i) => (
           <button key={p.id} className={`intent ${i === intent ? "active" : ""}`} style={{ "--c": p.color } as React.CSSProperties} aria-pressed={i === intent} onClick={() => a.chooseIntent(i)}>
-            <Icon name={p.icon} /> {p.name} {i === intent && <b><Icon name="check" label="Elegido" /></b>}
+            <Icon name={p.icon} /> {i + 1} · {p.name} {i === intent && <b><Icon name="check" label="Elegido" /></b>}
           </button>
         ))}
       </div>

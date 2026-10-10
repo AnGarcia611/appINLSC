@@ -5,6 +5,7 @@ import { PACKAGE_FORMAT, PACKAGE_VERSION, decodeFrame, encodeFrame, type Capture
 import { WindowPool, buildSignTemplates, signLabel } from "../src/capture/dataset.ts"
 import { curlFingers, flexTake, foldOf, makePersona, mirrorFrame, reshapeHand, rng, simulate, varyTake } from "../src/capture/synth.ts"
 import { fingerExtension, jointAngles } from "../src/vision/features.ts"
+import { IntentArbiter } from "../src/vision/intent.ts"
 import { NumberRecognizer } from "../src/vision/numbers.ts"
 import { INTENT_LABELS, SignRecognizer } from "../src/vision/signs.ts"
 import { dtw } from "../src/vision/dtw.ts"
@@ -167,4 +168,47 @@ test("simulación: incluye 6–9 fabricados desde 1–4, en el grupo de su toma 
   const fab = sims.flatMap((s) => s.takes).filter((t) => t.label === "7")
   assert.ok(fab.length > 0, "ninguna variante fabricada")
   for (const t of fab) assert.equal(foldOf(t, 5), foldOf(src, 5))
+})
+
+// ── Trámite con la seña libre o con la seña del número de la opción ──
+
+/** Trámites hechos con la mano en forma de 2 (un número válido): el reconocedor de números ve un "2" mientras se mueve. */
+const vTraining = pkg([
+  ...[1, 2, 3].map((s) => take("tramite-asignar", moving(sideToSide, SHAPES[2], s), `va${s}`)),
+  ...[1, 2, 3].map((s) => take("tramite-cancelar", moving(upAndDown, SHAPES[5], s), `vc${s}`)),
+  ...[1, 2, 3].map((s) => take("otra", moving(circle, SHAPES[1], s), `vo${s}`)),
+])
+let vFile: ReturnType<typeof buildSignTemplates> | null = null
+const vTemplates = () => {
+  if (vFile) return vFile
+  const pool = new WindowPool(1), cal = new WindowPool(2)
+  pool.addPackage(vTraining)
+  for (const p of simulate([vTraining], { personas: 4, seed: 1 })) pool.addPackage(p)
+  for (const p of simulate([vTraining], { personas: 2, seed: 99 })) cal.addPackage(p)
+  return (vFile = buildSignTemplates(pool, cal))
+}
+const decide = (frames: Frame[], numbers: number) => {
+  const a = new IntentArbiter({ templates: vTemplates(), numbers })
+  return frames.map((f) => a.push(f)).filter((d) => d !== null)
+}
+/** Número quieto 1.5 s y la mano baja. */
+const held = (n: number) => [...sequence(4, () => null), ...sequence(30, () => hand(SHAPES[n], { jitter: 0.001 }), 200), ...sequence(14, () => null, 1700)]
+
+test("trámite: la seña libre manda aunque la mano tenga forma de número", () => {
+  const d = decide(moving(sideToSide, SHAPES[2], 50), 3)
+  assert.equal(d.length, 1, JSON.stringify(d))
+  assert.equal(d[0]!.by, "seña")
+  assert.equal(d[0]!.intent, 0)
+})
+
+test("trámite: la seña del número quieto elige la opción (si está activada)", () => {
+  const d = decide(held(2), 3)
+  assert.equal(d.length, 1, JSON.stringify(d))
+  assert.equal(d[0]!.by, "número")
+  assert.equal(d[0]!.intent, 1)
+  // (Con estas manos sintéticas la mano abierta quieta puede parecerse a "cancelar", que se entrenó con la mano abierta:
+  // aquí solo importa que ningún número se convierta en elección.)
+  const byNumber = (frames: Frame[], numbers: number) => decide(frames, numbers).filter((x) => x.by === "número")
+  assert.equal(byNumber(held(2), 0).length, 0, "sin la seña del número activada")
+  assert.equal(byNumber(held(5), 3).length, 0, "5 no es una de las 3 opciones")
 })

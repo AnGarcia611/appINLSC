@@ -178,7 +178,7 @@ Prueba la integración real: el señante hace la seña en la tablet y el funcion
 
 1. En el computador abra **https://localhost:5173/**.
 2. En la ventanita "¿Necesita ayuda?" pulse **Conectar tablet**. Se abre el panel con el QR.
-3. En el panel, en **Selección en las infografías**, elija **Toque o seña del número**.
+3. En el panel, en **Elegir opciones con la seña del número**, elija **Toque o seña del número**.
    - Debajo del panel debe decir: `MODO DEMO · trámite simulado · seña del número real (beta)`.
 4. En la tablet, **escanee el QR**. Acepte el aviso del certificado.
 5. En la tablet, **toque la pantalla** y **permita la cámara**.
@@ -193,7 +193,7 @@ En el panel:
 | Inicio | **Iniciar atención** |
 | Saludo | **Continuar** |
 | Solicitud | **Activar cámara** |
-| Detección del trámite | El señante hace la seña de "pedir una cita" (o toca **Asignación de cita** en la tablet) → esperar el resultado → **Confirmar: Asignación de cita** |
+| Detección del trámite | El señante hace la seña de "pedir una cita", **o la seña del número 1**, o toca **1 Asignación de cita** en la tablet → esperar el resultado → **Confirmar: Asignación de cita**. Con el número, el panel dice *Seña del número 1 reconocida en la tablet* (llega al bajar la mano o ~1.5 s después) |
 | Documento | **Documento recibido** |
 | Especialidad | **Ejemplo** → **Enviar a la tablet** |
 
@@ -214,7 +214,7 @@ Sigue igual en **Disponibilidad**: **Usar horarios de ejemplo** (o agregue horar
 
 ### 2.4 Volver a "solo toque"
 
-Termine o cancele la atención. En el panel elija **Selección en las infografías → Solo toque**. En la siguiente infografía la tablet **no** muestra cámara.
+Termine o cancele la atención. En el panel elija **Elegir opciones con la seña del número → Solo toque**. En la siguiente infografía la tablet **no** muestra cámara, y en el trámite solo vale la seña libre o el toque (los números siguen visibles).
 
 ---
 

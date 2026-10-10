@@ -23,7 +23,7 @@ function useStored<T extends string>(key: string, initial: T) {
 export default function AdminApp() {
   const [gender, setGender] = useStored<Gender>("inlsc.gender", "m")
   const [side, setSide] = useStored<Side>("inlsc.side", "right")
-  // Reconocimiento de la seña del número en las infografías (además del toque). Beta: el funcionario siempre confirma.
+  // Reconocimiento de la seña del número de la opción, en el trámite y en las infografías (además del toque). Beta: el funcionario siempre confirma.
   // Apagado por defecto: en Ajustes1 (28-sep) se pidió que en las elecciones el señante solo toque, sin cámara.
   const [signPref, setSignPref] = useStored<"on" | "off">("inlsc.signNumbers", "off")
   const signNumbers = signPref === "on"
@@ -227,12 +227,12 @@ function Preferences({ gender, setGender, side, setSide, signNumbers, setSignNum
         </div>
       </div>
       <div className="field">
-        Selección en las infografías
-        <div className="seg" role="group" aria-label="Selección en las infografías">
+        Elegir opciones con la seña del número
+        <div className="seg" role="group" aria-label="Elegir opciones con la seña del número">
           <button className={!signNumbers ? "on" : ""} aria-pressed={!signNumbers} onClick={() => setSignNumbers(false)}>Solo toque</button>
           <button className={signNumbers ? "on" : ""} aria-pressed={signNumbers} onClick={() => setSignNumbers(true)}>Toque o seña del número</button>
         </div>
-        <small>La seña del número se reconoce en la tablet (beta). Usted siempre confirma la opción.</small>
+        <small>En el trámite (1, 2, 3) y en las infografías. Las opciones siempre van numeradas; la seña del número se reconoce en la tablet (beta). La seña libre del trámite funciona igual. Usted siempre confirma.</small>
       </div>
     </div>
   )

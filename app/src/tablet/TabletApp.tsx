@@ -87,6 +87,7 @@ export default function TabletApp() {
             <IntentPanel
               stream={stream}
               seq={state.seq}
+              numbers={state.recognize.numbers ?? 0}
               onSign={(r, seq) => { if (status === "connected") send({ type: "sign", seq, task: "tramite", ...r }) }}
             />
           ) : (

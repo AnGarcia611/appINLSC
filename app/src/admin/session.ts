@@ -23,8 +23,8 @@ export interface Session {
   index: number
   /** Se incrementa para reiniciar el video en la tablet. */
   seq: number
-  /** `source`: de dónde salió el trámite detectado. La confianza solo aplica a la seña. */
-  detect: { status: "waiting" | "done"; intent: number; confidence: number; source?: "seña" | "táctil" }
+  /** `source`: de dónde salió el trámite detectado. La confianza solo aplica a las señas (la del trámite o la del número). */
+  detect: { status: "waiting" | "done"; intent: number; confidence: number; source?: "seña" | "número" | "táctil" }
   specialties: MenuOption[] | null
   citasSent: boolean
   slots: Slot[] | null
@@ -86,7 +86,7 @@ export function useSession() {
   const detectBySign = (e: Extract<TabletEvent, { type: "sign" }>) => update((s) => {
     if (e.task !== "tramite" || e.seq !== s.seq || currentStep(s).kind !== "detect" || s.detect.status !== "waiting") return s
     if (!PATHS[e.value]) return s
-    return { ...s, detect: { status: "done", intent: e.value, confidence: e.confidence, source: "seña" } }
+    return { ...s, detect: { status: "done", intent: e.value, confidence: e.confidence, source: e.by === "número" ? "número" : "seña" } }
   })
   const retryDetection = () => { update((s) => ({ ...s, seq: s.seq + 1, detect: { status: "waiting", intent: 0, confidence: 0 } })) }
   const chooseIntent = (intent: number) => update((s) => ({ ...s, detect: { ...s.detect, intent } }))
@@ -152,8 +152,8 @@ export type SessionActions = ReturnType<typeof useSession>["actions"]
 
 /**
  * Traduce la sesión del funcionario a lo que debe mostrar la tablet.
- * `signNumbers`: en las infografías, además del toque, la tablet reconoce la seña del número de la opción.
- * En la detección del trámite la tablet siempre reconoce la seña con la cámara, y el señante también puede tocar su opción.
+ * `signNumbers`: además del toque, la tablet reconoce la seña del número de la opción, en el trámite (1, 2, 3) y en las infografías.
+ * En la detección del trámite la tablet siempre reconoce la seña libre con la cámara, y el señante también puede tocar su opción.
  */
 export function buildTabletState(s: Session, gender: Gender, manifest: VideoManifest, signNumbers = false): TabletState {
   const video = (id: Parameters<typeof pickVideo>[0]) => pickVideo(id, gender, manifest)
@@ -182,14 +182,18 @@ export function buildTabletState(s: Session, gender: Gender, manifest: VideoMani
     case "detect":
       return {
         ...base, camera: true, video: video("solicitud"),
-        ...(s.detect.status === "waiting" ? { recognize: { task: "tramite" } satisfies Recognize } : {}),
-        view: { kind: "detect", options: PATHS.map((p) => ({ icon: p.icon, text: p.name })), detected: s.detect.status === "done" && s.detect.confidence >= 70 ? s.detect.intent : null },
+        ...(s.detect.status === "waiting" ? { recognize: { task: "tramite", ...(signNumbers ? { numbers: PATHS.length } : {}) } satisfies Recognize } : {}),
+        view: {
+          kind: "detect", options: PATHS.map((p) => ({ icon: p.icon, text: p.name })),
+          detected: s.detect.status === "done" && s.detect.confidence >= 70 ? s.detect.intent : null,
+          instruction: signNumbers ? "Haga la seña de su solicitud o del número, o toque su opción" : "Haga la seña de su solicitud o toque su opción",
+        },
       }
 
     case "especialidad":
       if (!s.specialties) return { ...base, view: { kind: "video" }, video: video("especialidad") }
       {
-        const { instruction, ...rec } = choice(s.specialties.length, "Seleccione su cita en la pantalla")
+        const { instruction, ...rec } = choice(s.specialties.length, "Seleccione la especialidad en la pantalla")
         return { ...base, ...rec, video: video("seleccion"), view: { kind: "menu", title: "Especialidades disponibles", instruction, options: s.specialties, selected } }
       }
 
