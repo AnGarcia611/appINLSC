@@ -15,6 +15,8 @@
     "test:sync": "node scripts/test-relay.ts",
     "vision": "node scripts/prepare-vision.mjs",
     "dataset": "node scripts/dataset.ts",
+    "simular": "node scripts/simular.ts",
+    "evaluar": "node scripts/evaluar.ts",
     "test": "node --test test/*.test.ts"
   },
   "dependencies": {

@@ -20,7 +20,10 @@ interface Props {
   /** Indicador de conexión (solo en la tablet real). Va en el encabezado para no tapar la barra de progreso. */
   status?: ReactNode
   onSelect?: (index: number) => void
-  /** Reconocimiento de la seña del número (solo en la tablet real, en las infografías). */
+  /**
+   * Reconocimiento de señas (solo en la tablet real): la seña del número en las infografías,
+   * o la cámara con el reconocimiento del trámite en la detección (reemplaza a la cámara simple).
+   */
   sign?: ReactNode
 }
 
@@ -64,7 +67,7 @@ export default function TabletScreen({ state, stream, cameraError, preview, stat
         {view.kind === "detect" && (
           <div className="tab-split">
             <section className="tab-left">
-              <Camera stream={stream} error={cameraError} preview={preview} />
+              {sign ?? <Camera stream={stream} error={cameraError} preview={preview} />}
               <div className="tab-chips">
                 {view.options.map((o, i) => (
                   <div key={o.text} className={`tab-chip ${view.detected === i ? "is-match" : ""}`}>

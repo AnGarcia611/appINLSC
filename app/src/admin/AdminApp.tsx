@@ -27,6 +27,10 @@ export default function AdminApp() {
   // Apagado por defecto: en Ajustes1 (28-sep) se pidió que en las elecciones el señante solo toque, sin cámara.
   const [signPref, setSignPref] = useStored<"on" | "off">("inlsc.signNumbers", "off")
   const signNumbers = signPref === "on"
+  // Detección del trámite con la cámara (beta). Encendida por defecto: es la demo con manos.
+  // Apagada, el funcionario la simula con los botones de siempre.
+  const [intentPref, setIntentPref] = useStored<"on" | "off">("inlsc.signIntent", "on")
+  const signIntent = intentPref === "on"
   const [open, setOpen] = useState(false)
   const [manifest, setManifest] = useState<VideoManifest>({})
   // Código de la sesión de emparejamiento. Se conserva al recargar para que la tablet se reconecte sola.
@@ -38,12 +42,13 @@ export default function AdminApp() {
 
   const sync = useAdminSync(code || null, (event) => {
     if (event.type === "select") actions.selectByTouch(event.index)
+    else if (event.type === "sign" && event.task === "tramite") actions.detectBySign(event)
     else if (event.type === "sign") actions.selectBySign(event)
   })
   // Sin tablet conectada no se puede iniciar ni avanzar; una atención en curso queda en pausa.
   const tablet = sync.tablet
 
-  const tabletState = useMemo(() => buildTabletState(session, gender, manifest, signNumbers), [session, gender, manifest, signNumbers])
+  const tabletState = useMemo(() => buildTabletState(session, gender, manifest, signNumbers, signIntent), [session, gender, manifest, signNumbers, signIntent])
   const serialized = JSON.stringify(tabletState)
   // `tablet` en las dependencias: al (re)conectarse la tablet se vuelve a publicar el estado actual.
   useEffect(() => { sync.send(tabletState) }, [serialized, tablet, sync.online]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -104,7 +109,7 @@ export default function AdminApp() {
             <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Minimizar panel"><Icon name="remove" /></button>
           </header>
 
-          <div className="demo-badge">{signNumbers ? "MODO DEMO · trámite simulado · seña del número real (beta)" : "MODO DEMO · reconocimiento de señas simulado"}</div>
+          <div className="demo-badge">{demoBadge(signIntent, signNumbers)}</div>
 
           {connection}
 
@@ -128,14 +133,14 @@ export default function AdminApp() {
                 )}
                 {/* fieldset deshabilitado: bloquea todos los botones y campos del paso mientras no hay tablet */}
                 <fieldset className="controls-lock" disabled={!tablet}>
-                  <StepControls session={session} actions={actions} signNumbers={signNumbers} />
+                  <StepControls session={session} actions={actions} signNumbers={signNumbers} signIntent={signIntent} />
                 </fieldset>
               </>
             ) : (
               <div className="dock-idle">
                 {session.finished && <div className="done-card"><span><Icon name="check" /></span><strong>Trámite completado</strong></div>}
                 {/* Preferencias a la vista (sin ⚙) mientras no hay atención; al iniciarla desaparecen. */}
-                <Preferences gender={gender} setGender={setGender} side={side} setSide={setSide} signNumbers={signNumbers} setSignNumbers={(on) => setSignPref(on ? "on" : "off")} />
+                <Preferences gender={gender} setGender={setGender} side={side} setSide={setSide} signNumbers={signNumbers} setSignNumbers={(on) => setSignPref(on ? "on" : "off")} signIntent={signIntent} setSignIntent={(on) => setIntentPref(on ? "on" : "off")} />
                 {tablet && (
                   <div className="session-line">
                     <span><Icon name="check_circle" fill /> Tablet conectada · Sesión {code}</span>
@@ -206,9 +211,21 @@ function GenderSwitch({ gender, setGender, small }: { gender: Gender; setGender:
   )
 }
 
-function Preferences({ gender, setGender, side, setSide, signNumbers, setSignNumbers }: {
+/**
+ * Franja de modo demo: dice qué se reconoce de verdad y qué se simula.
+ * Se mantiene siempre: el reconocimiento está en prueba y no debe parecer interpretación.
+ */
+function demoBadge(signIntent: boolean, signNumbers: boolean): string {
+  if (signIntent && signNumbers) return "MODO DEMO · reconocimiento de señas en prueba (beta)"
+  if (signIntent) return "MODO DEMO · trámite reconocido con la cámara (beta) · elecciones por toque"
+  if (signNumbers) return "MODO DEMO · trámite simulado · seña del número real (beta)"
+  return "MODO DEMO · reconocimiento de señas simulado"
+}
+
+function Preferences({ gender, setGender, side, setSide, signNumbers, setSignNumbers, signIntent, setSignIntent }: {
   gender: Gender; setGender: (g: Gender) => void; side: Side; setSide: (s: Side) => void
   signNumbers: boolean; setSignNumbers: (on: boolean) => void
+  signIntent: boolean; setSignIntent: (on: boolean) => void
 }) {
   return (
     <div className="prefs">
@@ -223,6 +240,14 @@ function Preferences({ gender, setGender, side, setSide, signNumbers, setSignNum
           <button className={side === "left" ? "on" : ""} aria-pressed={side === "left"} onClick={() => setSide("left")}>Izquierda</button>
           <button className={side === "right" ? "on" : ""} aria-pressed={side === "right"} onClick={() => setSide("right")}>Derecha</button>
         </div>
+      </div>
+      <div className="field">
+        Detección del trámite
+        <div className="seg" role="group" aria-label="Detección del trámite">
+          <button className={!signIntent ? "on" : ""} aria-pressed={!signIntent} onClick={() => setSignIntent(false)}>Simulada</button>
+          <button className={signIntent ? "on" : ""} aria-pressed={signIntent} onClick={() => setSignIntent(true)}>Con la cámara</button>
+        </div>
+        <small>La tablet reconoce la seña de asignar, cancelar o facturar (beta). Usted siempre confirma el trámite.</small>
       </div>
       <div className="field">
         Selección en las infografías

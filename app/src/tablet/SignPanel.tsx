@@ -8,7 +8,7 @@ import type { Frame } from "../vision/types"
 
 interface Props {
   stream: MediaStream
-  recognize: Recognize
+  recognize: Extract<Recognize, { task: "number" }>
   /** Del estado actual: al cambiar (otro paso u otras opciones) se reinicia el reconocimiento. */
   seq: number
   onSign: (result: NumberResult) => void

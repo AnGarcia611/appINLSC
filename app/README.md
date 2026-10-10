@@ -79,7 +79,7 @@ Para probar sin la tablet, abra la dirección de la tablet (con `&s=<código>`) 
 | 1 | Elija el intérprete (*Mujer / Hombre*) y pulse *Iniciar atención* en la ventanita | Video de saludo |
 | 2 | *Continuar* | Video "¿Cuál es su solicitud?" |
 | 3 | *Activar cámara* | Cámara activa + los 3 trámites |
-| 4 | *Servicios básicos de salud* → *Simular reconocimiento* (Asignación) → *Confirmar* | Hace la seña de "agendar cita"; se marca ✓ |
+| 4 | Espera el resultado (2–4 s) → *Confirmar* | Hace la seña de "pedir una cita"; la tablet la reconoce y se marca ✓ |
 | 5 | *Documento recibido* | Video "entregue su documento" |
 | 6 | Especialidad: *Ejemplo* → *Enviar a la tablet* | Infografía de especialidades → **toca una opción** |
 | 7 | *Confirmar opción* → *Orden verificada* | Video "orden médica" |
@@ -87,7 +87,8 @@ Para probar sin la tablet, abra la dirección de la tablet (con `&s=<código>`) 
 | 9 | *Finalizar atención* | "¡Cita asignada!" + "Que tenga un buen día" |
 
 **Variantes para mostrar:**
-- **Confianza baja:** en el paso 4 use *Simular confianza baja* para mostrar la validación del funcionario y *Volver a captar seña*.
+- **Sin cámara:** en el paso 4, *Simular sin cámara* → *Simular reconocimiento* (o *Simular confianza baja* para mostrar la validación del funcionario y *Volver a captar seña*). También se puede apagar en las preferencias: *Detección del trámite → Simulada*.
+- **Si la seña no se reconoce:** el funcionario elige el trámite con los botones que aparecen debajo, o pide repetir con *Volver a captar seña*.
 - **Sin disponibilidad:** en el paso 8 use *Sin disponibilidad*: la tablet reproduce el video de negación con el aviso «No hay disponibilidad. Intente otro día.» y el panel ofrece *Finalizar atención*.
 - **Celular:** abra la dirección de la tablet en un celular, en vertical u horizontal.
 - **Otros trámites:** cancelación (lista de citas simuladas) y facturación (campo de valor en $).
@@ -96,7 +97,7 @@ Para probar sin la tablet, abra la dirección de la tablet (con `&s=<código>`) 
 
 | Real | Simulado / pendiente |
 |---|---|
-| Sincronización PC ↔ tablet por sesiones (SSE local o relé MQTT) | Reconocimiento de señas (lo dispara el funcionario) |
+| Sincronización PC ↔ tablet por sesiones (SSE local o relé MQTT) | Reconocimiento de señas: **en prueba**, entrenado con 1 señante (S-9BST) y datos simulados a partir de sus tomas |
 | Videos LSC reales y elección hombre/mujer según el perfil (se elige en el panel antes de iniciar) | Citas del paciente (`MOCK_CITAS`) |
 | Selección táctil en la tablet | Integración con el sistema de agendamiento de la IPS |
 | Cámara de la tablet (vista previa, solo al detectar la seña) | Registro de información por una semana |
@@ -120,6 +121,7 @@ Los trámites se definen como datos en `src/shared/flows.ts`, y el nombre de la 
 
 Ver `../plan_reconocimiento_LSC.md`. Todo corre en el navegador de la tablet con MediaPipe 0.10.35, sin internet. El video nunca sale de la tablet.
 
+- **Detección del trámite (asignar, cancelar, facturar):** preferencia *Detección del trámite → Con la cámara* (encendida por defecto). La tablet compara la seña con prototipos (`src/vision/signs.ts`, DTW + k vecinos) y envía el trámite con su confianza; el funcionario confirma. Clases de rechazo "nada" y "otra": si la seña no se parece a ninguna, no se emite nada y el funcionario elige el trámite a mano.
 - **Seña del número en las infografías:** en el panel, preferencia *Selección en las infografías → Toque o seña del número* (apagada por defecto). La tablet reconoce 1–9 y el funcionario confirma; con confianza < 70 % solo se sugiere.
 - **`/?captura`:** página para que señantes graben y validen señas (consentimiento, perfil anónimo, grabación guiada, prueba del reconocedor). El paquete (solo puntos, sin video) se envía por correo a `CAPTURE_EMAIL` (`src/shared/config.ts`): automático con el servicio `../captura-mail` (Cloudflare Worker, `VITE_CAPTURE_URL`), o por el menú Compartir si no está disponible. El consentimiento es un **borrador** (`src/capture/consent.ts`) pendiente de revisión legal.
 - **`/?lab`:** diagnóstico en la tablet real: fps, GPU/CPU, extensión de los dedos y resultados en vivo. `?lab&src=videos/seleccion_m.mp4` analiza un video publicado.
@@ -127,7 +129,21 @@ Ver `../plan_reconocimiento_LSC.md`. Todo corre en el navegador de la tablet con
 ```bash
 npm run vision                      # copia el wasm de MediaPipe a public/vision (también corre solo antes de dev/build/start)
 npm test                            # pruebas del motor con manos sintéticas
-npm run dataset -- ~/inlsc-datos    # valida los paquetes recibidos, imprime un informe y genera public/vision/numbers.templates.json
+npm run dataset -- ~/inlsc-datos    # informe + plantillas: public/vision/numbers.templates.json y signs.templates.json
+npm run evaluar -- ~/inlsc-datos    # mide con tomas reales no vistas (≈ 1 min): aciertos, falsos disparos, matrices de confusión
+npm run simular -- ~/inlsc-datos ~/inlsc-datos/sinteticos   # opcional: escribe los paquetes simulados para revisarlos
 ```
 
-> ⚠️ Guarde los paquetes recibidos **fuera de este repositorio** (es público). `npm run dataset` se niega a leer carpetas dentro del repo.
+> ⚠️ Guarde los paquetes recibidos **fuera de este repositorio** (es público). Los scripts se niegan a leer o escribir carpetas dentro del repo.
+
+**Datos simulados** (`src/capture/synth.ts`, ver `../plan_datos_sinteticos.md`): con una sola captura real, cada toma se convierte en variantes de ~40 "personas" sintéticas (otros largos de dedos y pulgar, zurdos, alcance y ritmo propios) con otra cámara (distancia, posición, inclinación, giro), otra velocidad y fps, y ruido del detector (temblor, manos perdidas, lado invertido). También se generan negativos ("nada": llevarse la mano a la cara; "otra": señas al revés). Todo con semilla fija: `dataset` y `evaluar` simulan en memoria y siempre dan lo mismo. Las plantillas que se publican no tienen código de señante ni datos de la cara: formas de mano (ángulos) y trayectorias relativas a los hombros a 10 por segundo.
+
+**Resultados con la captura S-9BST** (`npm run evaluar`, 5 grupos, tomas reales no vistas al entrenar):
+
+| Reconocedor | Aciertos | Falsos disparos | Nota |
+|---|---|---|---|
+| Trámites | 23/24 (96 %) | 1/128 (1 %) | Resultado a los 2.1 s de levantar la mano (mediana). 5 de 23 con confianza < 70 %: el panel pide validar |
+| Números 1–9 | 84/87 (97 %) | — | Antes 86/93 (≈ 91 %) sin plantillas y con el 5 leído como 4. El NO con el índice todavía puede leerse como 1 o 7: el funcionario confirma |
+| Sí / no con la mano | 16/17 (94 %) | 38 % | No se usa en el flujo: se confunde con números. Queda para un paso de confirmación futuro |
+
+Son resultados de **una sola persona**: no dicen cuánto acierta con otros señantes. Con otra persona en la demo, conviene grabar antes 15 min con `/?captura` y volver a correr `npm run dataset`.

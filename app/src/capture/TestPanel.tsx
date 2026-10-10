@@ -3,30 +3,41 @@ import Icon from "../shared/Icon"
 import VisionCamera, { type VisionStatus } from "../vision/VisionCamera"
 import { HeadGestureDetector } from "../vision/head"
 import { NumberRecognizer } from "../vision/numbers"
-import { loadNumberTemplates } from "../vision/templates"
+import { INTENT_LABELS, SignRecognizer } from "../vision/signs"
+import { loadNumberTemplates, loadSignTemplates } from "../vision/templates"
 import type { Frame } from "../vision/types"
 import type { Trial } from "./format"
 
 type Result = { task: Trial["task"]; predicted: string; confidence: number }
 
-const CHOICES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "sí", "no"]
+const CHOICES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "sí", "no", ...INTENT_LABELS]
+const taskOf = (expected: string): Trial["task"] => (expected === "sí" || expected === "no" ? "cabeza" : INTENT_LABELS.includes(expected) ? "trámite" : "número")
 
 /** El señante prueba el reconocimiento en vivo y marca si acertó: cada intento queda como dato de evaluación real. */
 export default function TestPanel({ stream, trials, onTrial, onBack }: { stream: MediaStream; trials: Trial[]; onTrial: (t: Trial) => void; onBack: () => void }) {
   const numbers = useRef<NumberRecognizer | null>(null)
+  const intents = useRef<SignRecognizer | null>(null)
   const head = useRef(new HeadGestureDetector())
   const [status, setStatus] = useState<VisionStatus>({ state: "cargando" })
   const [result, setResult] = useState<Result | null>(null)
   const [correcting, setCorrecting] = useState(false)
   const pending = useRef(false)
 
-  useEffect(() => { loadNumberTemplates().then((templates) => { numbers.current = new NumberRecognizer({ templates }) }) }, [])
+  useEffect(() => {
+    loadNumberTemplates().then((templates) => { numbers.current = new NumberRecognizer({ templates }) })
+    const settings = stream.getVideoTracks()[0]?.getSettings()
+    const aspect = settings?.width && settings?.height ? settings.width / settings.height : 16 / 9
+    loadSignTemplates().then((templates) => { if (templates) intents.current = new SignRecognizer({ accept: INTENT_LABELS, templates, aspect }) })
+  }, [stream])
 
   const onFrame = (frame: Frame) => {
     if (pending.current) return // espera la respuesta ✓/✗ antes de reconocer otra seña
     const n = numbers.current?.push(frame)
+    const i = intents.current?.push(frame)
     const h = head.current.push(frame)
-    const r: Result | null = n ? { task: "número", predicted: String(n.value), confidence: n.confidence } : h ? { task: "cabeza", predicted: h.value, confidence: h.confidence } : null
+    const r: Result | null = i ? { task: "trámite", predicted: i.value, confidence: i.confidence }
+      : n ? { task: "número", predicted: String(n.value), confidence: n.confidence }
+      : h ? { task: "cabeza", predicted: h.value, confidence: h.confidence } : null
     if (r) { pending.current = true; setResult(r); setCorrecting(false) }
   }
 
@@ -43,13 +54,14 @@ export default function TestPanel({ stream, trials, onTrial, onBack }: { stream:
   }
   /** El reconocedor no respondió a una seña: se registra como fallo sin predicción. */
   const missed = (expected: string) => {
-    onTrial({ task: expected === "sí" || expected === "no" ? "cabeza" : "número", expected, predicted: null, confidence: null, correct: false, at: new Date().toISOString() })
+    onTrial({ task: taskOf(expected), expected, predicted: null, confidence: null, correct: false, at: new Date().toISOString() })
     next()
   }
   const next = () => {
     setResult(null)
     setCorrecting(false)
     numbers.current?.reset()
+    intents.current?.reset()
     head.current.reset()
     pending.current = false
   }
@@ -64,14 +76,14 @@ export default function TestPanel({ stream, trials, onTrial, onBack }: { stream:
       <div className="rec">
         <div className="rec-stage"><VisionCamera stream={stream} onFrame={onFrame} onStatus={setStatus} /></div>
         <div className="rec-side" aria-live="polite">
-          <p className="rec-instruction">Haga la seña de un número del 1 al 9, o asienta o niegue con la cabeza.</p>
+          <p className="rec-instruction">Haga la seña de un número del 1 al 9, de un trámite (pedir, cancelar o pagar una cita), o asienta o niegue con la cabeza.</p>
           {status.state === "listo" && <p className="cap-muted">Cámara lista · {status.delegate} · {status.fps} fps</p>}
           {status.state === "error" && <p className="rec-warn"><Icon name="warning" fill /> {status.message}</p>}
 
           {result ? (
             <div className="test-result">
               <span className="test-big">{result.predicted}</span>
-              <span>Entendí <b>{result.task === "cabeza" ? `“${result.predicted}” con la cabeza` : `el número ${result.predicted}`}</b> · {result.confidence} %</span>
+              <span>Entendí <b>{result.task === "cabeza" ? `“${result.predicted}” con la cabeza` : result.task === "trámite" ? `el trámite “${result.predicted}”` : `el número ${result.predicted}`}</b> · {result.confidence} %</span>
               {!correcting ? (
                 <div className="cap-row">
                   <button className="cap-btn primary" onClick={() => answer(true)}><Icon name="check" /> Acertó</button>

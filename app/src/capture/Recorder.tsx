@@ -6,8 +6,11 @@ import type { Frame } from "../vision/types"
 import { decodeFrame, encodeFrame, type CompactFrame, type Take } from "./format"
 import type { SignTask } from "./tasks"
 
-/** Tiempo máximo de una toma "seña" y tiempo máximo esperando a que aparezca la mano. */
-const MAX_MS = 6000
+/**
+ * Tiempo máximo de una toma "seña" y tiempo máximo esperando a que aparezca la mano.
+ * Era 6 s: en la captura S-9BST todos los trámites llegaron al tope, probablemente incompletos.
+ */
+const MAX_MS = 10000
 const WAIT_MS = 5000
 
 type Phase =
