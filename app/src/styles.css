@@ -148,9 +148,6 @@ input, select { font: inherit; }
 .btn.sm { min-height: 36px; padding: 7px 12px; font-size: 14px; border-radius: 9px; }
 .row { display: flex; gap: 8px; }
 
-.demo-box { border: 1px dashed #d8b64a; background: #fffcf2; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.demo-title { font-size: 12px; font-weight: 700; color: #8a6400; }
-details.demo-box > summary { cursor: pointer; }
 
 .conf { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
 .conf-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--muted); }
@@ -316,6 +313,7 @@ details.demo-box > summary { cursor: pointer; }
 
 .tab-chips { display: flex; gap: 14px; }
 .tab-chip { flex: 1; display: flex; gap: 10px; align-items: center; justify-content: center; border: 2px solid var(--line); border-radius: 14px; padding: 14px; font-size: 20px; font-weight: 700; color: var(--muted); }
+button.tab-chip { font-family: inherit; background: #fff; cursor: pointer; min-height: 56px; }
 .tab-chip.is-match { border-color: var(--ok); background: #e6f4ea; color: var(--ok); }
 
 /* Opciones con aspecto de botón: borde, sombra inferior que "se hunde" al tocar y, al elegir, contorno verde y ✓.

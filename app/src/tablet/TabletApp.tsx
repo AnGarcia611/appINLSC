@@ -69,7 +69,7 @@ export default function TabletApp() {
         stream={state.camera ? stream : null}
         cameraError={cameraError}
         status={<ConnectionBadge status={status} code={code} />}
-        onSelect={(index) => { if (status === "connected") send({ type: "select", index }) }}
+        onSelect={(index) => { if (status === "connected") send({ type: "select", index, seq: state.seq }) }}
         sign={state.recognize && stream && (state.recognize.task === "tramite"
           ? (
             <IntentPanel

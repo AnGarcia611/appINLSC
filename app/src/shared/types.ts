@@ -47,7 +47,8 @@ export interface SignGuess { value: number; confidence: number }
 
 /** Lo que la tablet envía al panel del funcionario. */
 export type TabletEvent =
-  | { type: "select"; index: number }
+  /** Toque en una opción. `seq` es el del estado que mostraba la tablet. */
+  | { type: "select"; index: number; seq: number }
   /**
    * Seña reconocida en la tablet. `seq` es el del estado que la pidió: el panel descarta resultados de otro paso.
    * task "number": `value` = número 1..max · task "tramite": `value` = índice del trámite en PATHS.

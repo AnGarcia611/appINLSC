@@ -1,26 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react"
 
-/** Barra de precisión. Si `animating`, sube progresivamente hasta `value`. */
-export function ConfidenceBar({ value, animating, label }: { value: number; animating: boolean; label: string }) {
-  const [shown, setShown] = useState(animating ? 0 : value)
-
-  useEffect(() => {
-    // Con "reducir movimiento" activo en el sistema se muestra el valor final sin animar.
-    if (!animating || matchMedia("(prefers-reduced-motion: reduce)").matches) { setShown(value); return }
-    setShown(0)
-    const started = performance.now()
-    let frame = 0
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - started) / 1400)
-      setShown(Math.round(value * (1 - Math.pow(1 - t, 3))))
-      if (t < 1) frame = requestAnimationFrame(tick)
-    }
-    frame = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frame)
-  }, [value, animating])
-
+/** Barra de precisión de un reconocimiento (0–100 %). */
+export function ConfidenceBar({ value, label }: { value: number; label: string }) {
+  const shown = value
   const color = shown >= 80 ? "var(--ok)" : shown >= 60 ? "var(--warn)" : "var(--err)"
-  const band = animating && shown < value ? "Interpretando seña…" : shown >= 80 ? "Alta confianza" : shown >= 60 ? "Confianza media" : "Confianza baja"
+  const band = shown >= 80 ? "Alta confianza" : shown >= 60 ? "Confianza media" : "Confianza baja"
 
   return (
     <div className="conf">

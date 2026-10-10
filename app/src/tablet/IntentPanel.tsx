@@ -56,11 +56,11 @@ export default function IntentPanel({ stream, seq, onSign }: Props) {
   }
 
   const text = status.state === "error" || missing
-    ? "El reconocimiento no está disponible: el funcionario elegirá el trámite."
+    ? "Toque su opción debajo de la cámara."
     : status.state === "cargando" ? "Preparando la cámara…"
     : phase === "señando" ? "Viendo su seña…"
     : phase === "reconocido" ? "Listo. Espere la confirmación de recepción."
-    : "Levante las manos y haga la seña de su solicitud"
+    : "Haga la seña de su solicitud o toque su opción"
 
   return (
     <div className="tab-camera tab-camera-vision">
