@@ -193,7 +193,7 @@ Es la página para que las personas sordas graben señas y las envíen. Se usa e
 | Perfil | Responda o deje en blanco → **Continuar y activar la cámara** | Permita la cámara. Aparece la lista de señas con su progreso (`0 de 86 tomas`) |
 | Una seña | Toque **Número 3** | Muestra la referencia y pregunta **¿Usted hace esta seña así?** |
 | Validación | **Sí, así la hago** (o **La hago distinto** + comentario) | Aparece la cámara con esqueleto y el botón **Grabar** |
-| Grabar | **Grabar** → cuenta 3-2-1 → haga la seña → **baje la mano** | La grabación se corta sola al bajar la mano (máximo 10 s). Luego se **repite el esqueleto sin video** |
+| Grabar | **Grabar** → cuenta 3-2-1 → haga la seña → **baje la mano** | Mientras graba se ve el reloj (p. ej. «0:04 de 0:20») y una barra que se pone amarilla en los últimos 3 s. Se corta sola al bajar la mano (en trámites tolera pausas de hasta 1,2 s). Máximo: 20 s en trámites y «otra seña», 12 s en el resto. Al terminar dice por qué se detuvo y **repite el esqueleto sin video** |
 | Revisar | **Guardar** o **Repetir** | Con Guardar, el contador pasa a `Toma 2 de 5` |
 | Avisos de calidad | Grabe sin levantar la mano | Dice "No se vio la mano levantada…" |
 | Cabeza | **Sí (con la cabeza)** → Grabar → asienta | Graba 3 s fijos |
