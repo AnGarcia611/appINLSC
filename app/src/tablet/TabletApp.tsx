@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { isValidCode, normalizeCode, useTabletSync, type TabletStatus } from "../shared/sync"
 import type { TabletState } from "../shared/types"
 import Icon, { type IconName } from "../shared/Icon"
@@ -39,7 +39,19 @@ export default function TabletApp() {
     history.replaceState(null, "", url)
   }
 
-  const { status, send, retry } = useTabletSync(code, setState)
+  const { status, weak, send, retry } = useTabletSync(code, setState)
+
+  // El navegador suelta el bloqueo de pantalla al pasar a segundo plano: se vuelve a pedir al regresar.
+  // Con la pantalla apagada el navegador suspende la página y la tablet se desconecta.
+  useEffect(() => {
+    if (!started) return
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return
+      ;(navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<unknown> } }).wakeLock?.request("screen").catch(() => undefined)
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    return () => document.removeEventListener("visibilitychange", onVisible)
+  }, [started])
 
   // Un toque inicial es necesario en iPad/Android para pedir la cámara, pantalla completa y mantenerla encendida.
   async function start() {
@@ -68,21 +80,21 @@ export default function TabletApp() {
         state={state}
         stream={state.camera ? stream : null}
         cameraError={cameraError}
-        status={<ConnectionBadge status={status} code={code} />}
+        status={<ConnectionBadge status={status} weak={weak} code={code} />}
         onSelect={(index) => { if (status === "connected") send({ type: "select", index, seq: state.seq }) }}
         sign={state.recognize && stream && (state.recognize.task === "tramite"
           ? (
             <IntentPanel
               stream={stream}
               seq={state.seq}
-              onSign={(r) => { if (status === "connected") send({ type: "sign", seq: state.seq, task: "tramite", ...r }) }}
+              onSign={(r, seq) => { if (status === "connected") send({ type: "sign", seq, task: "tramite", ...r }) }}
             />
           ) : (
             <SignPanel
               stream={stream}
               recognize={state.recognize}
               seq={state.seq}
-              onSign={(r) => { if (status === "connected") send({ type: "sign", seq: state.seq, task: "number", value: r.value, confidence: r.confidence, alternatives: r.alternatives }) }}
+              onSign={(r, seq) => { if (status === "connected") send({ type: "sign", seq, task: "number", value: r.value, confidence: r.confidence, alternatives: r.alternatives }) }}
             />
           ))}
       />
@@ -98,11 +110,13 @@ export default function TabletApp() {
   )
 }
 
-function ConnectionBadge({ status, code }: { status: TabletStatus; code: string }) {
+function ConnectionBadge({ status, weak, code }: { status: TabletStatus; weak: boolean; code: string }) {
   const ok = status === "connected"
+  const tone = !ok ? "off" : weak ? "weak" : "ok"
   return (
-    <div className={`conn-badge ${ok ? "ok" : "off"}`} role="status">
-      <Icon name={ok ? "check_circle" : "link_off"} fill={ok} /><span className="conn-badge-text">{ok ? "Conectada a recepción" : "Sin conexión"} · {code}</span>
+    <div className={`conn-badge ${tone}`} role="status">
+      <Icon name={!ok ? "link_off" : weak ? "sync" : "check_circle"} fill={ok && !weak} />
+      <span className="conn-badge-text">{!ok ? "Sin conexión" : weak ? "Conexión inestable" : "Conectada a recepción"} · {code}</span>
     </div>
   )
 }
