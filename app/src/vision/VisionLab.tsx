@@ -7,6 +7,7 @@ import { REJECT_LABELS, SignRecognizer, type SignPhase } from "./signs"
 import { loadNumberTemplates, loadSignTemplates } from "./templates"
 import type { Frame } from "./types"
 import VisionCamera, { type VisionStatus } from "./VisionCamera"
+import YouTubeSource from "./YouTubeSource"
 import "./vision.css"
 import { cameraBlockedReason } from "../shared/camera"
 
@@ -33,13 +34,15 @@ const MOTION_BARS = [...MOTION_ACCEPT, ...REJECT_LABELS]
 
 /**
  * Laboratorio de visión (`/?lab`): diagnóstico en la tablet real (FPS, GPU o CPU, puntos detectados)
- * y prueba de todas las señas: números 1–9, trámites, sí/no con la mano y con la cabeza, con la cámara o con un video.
+ * y prueba de todas las señas: números 1–9, trámites, sí/no con la mano y con la cabeza, con la cámara, con un video
+ * o con un video de YouTube (se analiza la pestaña compartida y se pueden guardar sus puntos, ver YouTubeSource).
  * Con una seña elegida en "Probar", cada resultado se marca como acierto o fallo y se lleva la cuenta por seña.
  */
 export default function VisionLab() {
-  // ?lab&src=videos/saludo_m.mp4 analiza un video publicado (útil sin cámara).
-  const initialSrc = new URLSearchParams(location.search).get("src")
-  const [source, setSource] = useState<"cámara" | "video">(initialSrc ? "video" : "cámara")
+  // ?lab&src=videos/saludo_m.mp4 analiza un video publicado (útil sin cámara); ?lab&yt=<id> abre un video de YouTube.
+  const params = new URLSearchParams(location.search)
+  const initialSrc = params.get("src")
+  const [source, setSource] = useState<"cámara" | "video" | "youtube">(params.has("yt") ? "youtube" : initialSrc ? "video" : "cámara")
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [videoUrl, setVideoUrl] = useState<string | null>(initialSrc && `${import.meta.env.BASE_URL}${initialSrc.replace(/^\//, "")}`)
   const [error, setError] = useState<string | null>(null)
@@ -136,6 +139,7 @@ export default function VisionLab() {
         <div className="seg sm" role="group" aria-label="Fuente">
           <button className={source === "cámara" ? "on" : ""} onClick={() => setSource("cámara")}>Cámara</button>
           <button className={source === "video" ? "on" : ""} onClick={() => setSource("video")}>Video</button>
+          <button className={source === "youtube" ? "on" : ""} onClick={() => setSource("youtube")}>YouTube</button>
         </div>
         {source === "video" && (
           <input type="file" accept="video/*" aria-label="Video para analizar" onChange={(e) => { const f = e.target.files?.[0]; if (f) setVideoUrl(URL.createObjectURL(f)) }} />
@@ -146,6 +150,7 @@ export default function VisionLab() {
           <div className="lab-stage">
             {source === "cámara"
               ? <VisionCamera stream={stream} onFrame={onFrame} onStatus={setStatus} />
+              : source === "youtube" ? <YouTubeSource onFrame={onFrame} onStatus={setStatus} />
               : videoUrl ? <VisionCamera key={videoUrl} src={videoUrl} mirrored={false} onFrame={onFrame} onStatus={setStatus} /> : <p className="lab-empty">Elija un video para analizarlo.</p>}
             {error && source === "cámara" && <p className="lab-empty">{error}</p>}
           </div>

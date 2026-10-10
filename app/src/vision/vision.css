@@ -52,6 +52,23 @@
 .lab-chips em { margin-left: 6px; font-style: normal; font-size: 12px; font-weight: 700; padding: 1px 6px; border-radius: 999px; }
 .lab-chips em.good { background: #1f6b43; } .lab-chips em.mid { background: #7a5b12; } .lab-chips em.bad { background: #7d2a24; }
 .lab-ref { margin: 0; font-size: 14px; color: #c9d6e3; }
+/* Fuente YouTube del laboratorio. */
+.yt { display: flex; flex-direction: column; gap: 10px; }
+.yt-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.yt-row input { flex: 1; min-width: 200px; }
+.yt input, .yt select, .yt button { background: #1d2b3a; color: #e8eef5; border: 1px solid #2b3d50; border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 14px; }
+.yt button { cursor: pointer; }
+.yt button.on { background: #b3261e; border-color: #e0574f; }
+.yt button:disabled, .yt fieldset:disabled { opacity: 0.55; cursor: default; }
+.yt label { display: flex; gap: 6px; align-items: center; font-size: 13px; color: #c9d6e3; }
+.yt-player { width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; }
+.yt-player iframe { width: 100%; height: 100%; border: 0; display: block; }
+.yt-meta { margin: 0; font-size: 13px; color: #9fb2c6; }
+.yt-hint { font-size: 13px; color: #9fb2c6; }
+.yt-preview { width: min(100%, 360px); }
+.yt-preview .vcam { aspect-ratio: 16 / 9; }
+.yt-rec { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border: 1px solid #2b3d50; border-radius: 10px; padding: 10px 12px; }
+.yt-rec legend { padding: 0 6px; font-size: 13px; color: #9fb2c6; }
 @media (max-width: 760px) { .lab-body { grid-template-columns: 1fr; } }
 
 /* Aviso en el emparejamiento del panel cuando el servidor no usa HTTPS. */
