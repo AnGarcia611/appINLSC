@@ -1,6 +1,7 @@
 import { MOCK_CITAS, formatCOP, formatDate, formatTime } from "../shared/catalog"
 import { PATHS } from "../shared/flows"
-import { SIGN_ACCEPT, citaOptions, currentStep, stepsOf, type Session, type SessionActions } from "./session"
+import { OTHER_SPECIALTY, SIGN_ACCEPT, citaOptions, currentStep, stepsOf, type Session, type SessionActions } from "./session"
+import { loadSpecialties } from "./specialties"
 import { AmountInput, SlotPicker, SpecialtyPicker } from "./pickers"
 import Icon from "../shared/Icon"
 import { ConfidenceBar, Msg } from "./widgets"
@@ -27,10 +28,16 @@ export default function StepControls({ session: s, actions: a, signNumbers = fal
     case "especialidad":
       return (
         <>
-          <Msg tag={tag}>{s.specialties ? "Infografía enviada. Esperando la selección del señante." : step.hint}</Msg>
+          <Msg tag={tag}>{s.specialties ? "La tablet pregunta la especialidad y ya muestra la lista. Esperando la selección del señante." : step.hint}</Msg>
           {s.specialties
-            ? <PickControls s={s} a={a} signNumbers={signNumbers} labels={s.specialties.map((o) => `${o.tab} · ${o.text}`)} onEdit={() => a.sendSpecialties(null)} />
-            : <SpecialtyPicker onSend={a.sendSpecialties} />}
+            ? (
+              <PickControls
+                s={s} a={a} signNumbers={signNumbers} onEdit={() => a.sendSpecialties(null)}
+                labels={[...s.specialties.map((o) => `${o.tab} · ${o.text}`), `${OTHER_SPECIALTY.tab} · ${OTHER_SPECIALTY.text}`]}
+                otherIndex={s.specialties.length}
+              />
+            )
+            : <SpecialtyPicker onSend={a.sendSpecialties} initial={loadSpecialties()} />}
         </>
       )
 
@@ -137,9 +144,13 @@ function DetectControls({ s, a, tag, signNumbers }: { s: Session; a: SessionActi
   )
 }
 
-/** Espera la elección del señante (toque o seña del número) y deja confirmar la opción. */
-function PickControls({ s, a, labels, onEdit, signNumbers }: { s: Session; a: SessionActions; labels: string[]; onEdit: () => void; signNumbers: boolean }) {
+/**
+ * Espera la elección del señante (toque o seña del número) y deja confirmar la opción.
+ * `otherIndex`: opción "Otra" (la que necesita no está en la lista): no se confirma; el funcionario ajusta la lista.
+ */
+function PickControls({ s, a, labels, onEdit, signNumbers, otherIndex }: { s: Session; a: SessionActions; labels: string[]; onEdit: () => void; signNumbers: boolean; otherIndex?: number }) {
   const selected = s.pick
+  const other = otherIndex !== undefined && selected === otherIndex
   const sign = s.sign
   const bySign = s.pickBy === "seña" && sign !== null
   // Seña con poca confianza: no marca la opción; el funcionario la acepta o pide repetir.
@@ -173,7 +184,13 @@ function PickControls({ s, a, labels, onEdit, signNumbers }: { s: Session; a: Se
         </Msg>
       )}
 
-      <button className="btn primary" disabled={selected === null} onClick={a.confirmPick}>
+      {other && (
+        <Msg tag="NO ESTÁ EN LA LISTA" tone="warn">
+          El señante indica que su especialidad no está entre las opciones. Pregúntele cuál es (por ejemplo, que la escriba o la muestre en su orden médica) y use <b>Editar opciones</b> para enviarla.
+        </Msg>
+      )}
+
+      <button className="btn primary" disabled={selected === null || other} onClick={a.confirmPick}>
         {selected === null ? "Confirmar opción" : `Confirmar opción ${selected + 1}`} <Icon name="arrow_forward" />
       </button>
       <div className="row">

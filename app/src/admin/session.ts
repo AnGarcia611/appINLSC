@@ -10,6 +10,12 @@ export type Cita = (typeof MOCK_CITAS)[number]
 /** Aviso que acompaña al video de negación en la tablet. */
 const NO_AVAILABILITY: Notice = { title: "No hay disponibilidad", text: "Intente otro día." }
 
+/**
+ * Última opción de la lista de especialidades: si la que necesita no está, el señante lo puede decir (tocando o con el
+ * número) en vez de quedarse sin respuesta. No es una especialidad: el funcionario ajusta la lista.
+ */
+export const OTHER_SPECIALTY: MenuOption = { tab: "Otra", text: "Mi especialidad no está aquí", icon: "help", color: "#5f6b7a" }
+
 /** Confianza mínima (%) para que una seña de número marque la opción en la tablet sin intervención del funcionario. */
 export const SIGN_ACCEPT = 70
 
@@ -58,13 +64,21 @@ export const citaOptions = (): MenuOption[] =>
 /** Número de opciones que el señante puede elegir en el paso actual (0 si no hay infografía enviada). */
 export function optionCount(s: Session): number {
   const step = currentStep(s)
-  if (step.kind === "especialidad") return s.specialties?.length ?? 0
+  if (step.kind === "especialidad") return s.specialties ? s.specialties.length + 1 : 0 // + "Otra"
   if (step.kind === "cita") return s.citasSent ? MOCK_CITAS.length : 0
   if (step.kind === "horario") return s.noAvailability ? 0 : s.slots?.length ?? 0
   return 0
 }
 
-export function useSession() {
+export interface SessionOptions {
+  /**
+   * Lista que se muestra apenas se pregunta la especialidad (p. ej. la última que envió el funcionario): así el señante
+   * puede responder de una vez, tocando o con la seña del número, sin esperar a que el funcionario arme la lista.
+   */
+  defaultSpecialties?: () => MenuOption[] | null
+}
+
+export function useSession(opts: SessionOptions = {}) {
   const [session, setSession] = useState<Session>(NEW_SESSION)
 
   const update = useCallback((fn: (s: Session) => Session) => setSession(fn), [])
@@ -73,13 +87,15 @@ export function useSession() {
   const cancel = () => setSession(NEW_SESSION)
   const replay = () => update((s) => ({ ...s, seq: s.seq + 1 }))
 
-  const advance = () => {
-    update((s) => {
-      const last = s.index >= stepsOf(s).length - 1
-      if (last) return { ...s, active: false, finished: true }
-      return { ...s, index: s.index + 1, seq: s.seq + 1, pick: null, pickBy: null, sign: null }
-    })
+  /** Paso siguiente (o fin de la atención). Al llegar a la especialidad, la lista ya va a la tablet. */
+  const next = (s: Session): Session => {
+    const last = s.index >= stepsOf(s).length - 1
+    if (last) return { ...s, active: false, finished: true }
+    const n: Session = { ...s, index: s.index + 1, seq: s.seq + 1, pick: null, pickBy: null, sign: null }
+    if (currentStep(n).kind === "especialidad" && !n.specialties) n.specialties = opts.defaultSpecialties?.() ?? null
+    return n
   }
+  const advance = () => update(next)
 
   // ── Detección del trámite: seña reconocida en la tablet, toque en la tablet o elección del funcionario ──
   /** Trámite reconocido en la tablet. Solo vale para el paso de detección en curso y si todavía no se detectó otro. */
@@ -124,13 +140,14 @@ export function useSession() {
       const i = s.pick
       if (i === null) return s
       const step = currentStep(s)
+      // "Otra especialidad" no es una opción para confirmar: el funcionario ajusta la lista.
+      if (step.kind === "especialidad" && i >= (s.specialties?.length ?? 0)) return s
       const chosen = { ...s.chosen }
       if (step.kind === "especialidad") chosen.specialty = s.specialties![i]
       if (step.kind === "horario") chosen.slot = s.slots![i]
       if (step.kind === "cita") chosen.cita = MOCK_CITAS[i]
-      return { ...s, chosen }
+      return next({ ...s, chosen })
     })
-    advance()
   }
 
   return {
@@ -193,8 +210,10 @@ export function buildTabletState(s: Session, gender: Gender, manifest: VideoMani
     case "especialidad":
       if (!s.specialties) return { ...base, view: { kind: "video" }, video: video("especialidad") }
       {
-        const { instruction, ...rec } = choice(s.specialties.length, "Seleccione la especialidad en la pantalla")
-        return { ...base, ...rec, video: video("seleccion"), view: { kind: "menu", title: "Especialidades disponibles", instruction, options: s.specialties, selected } }
+        // La pregunta ("¿qué especialidad necesita?") va con la lista: el señante responde tocando o con el número.
+        const options = [...s.specialties, OTHER_SPECIALTY]
+        const { instruction, ...rec } = choice(options.length, "Seleccione la especialidad en la pantalla")
+        return { ...base, ...rec, video: video("especialidad"), view: { kind: "menu", title: "¿Qué especialidad necesita?", instruction, options, selected } }
       }
 
     case "cita":

@@ -4,6 +4,8 @@ import Icon from "../shared/Icon"
 import type { MenuOption, Slot } from "../shared/types"
 
 const MAX_OPTIONS = 9
+/** Especialidades: 8 como máximo, porque la 9.ª opción en la tablet es "Otra · Mi especialidad no está aquí". */
+const MAX_SPECIALTIES = 8
 
 /** Selección de ejemplo igual a la infografía de referencia. */
 const EXAMPLE_SERVICES: [string, string][] = [
@@ -17,6 +19,9 @@ const EXAMPLE_SERVICES: [string, string][] = [
   ["Medicina general", "Consulta medicina general"],
 ]
 
+/** Lista de ejemplo (la de la infografía de referencia): se usa al preguntar la especialidad si el funcionario no ha enviado otra. */
+export const exampleSpecialties = (): MenuOption[] => EXAMPLE_SERVICES.map(([a, b]) => toOption(a, b))
+
 const toOption = (specialty: string, service: string): MenuOption => {
   const sp = specialtyByName(specialty)!
   return { tab: sp.name, text: service, icon: sp.icon, color: sp.color }
@@ -25,15 +30,15 @@ const toOption = (specialty: string, service: string): MenuOption => {
 /** Minúsculas y sin tildes, para que "pediatria" encuentre "Pediatría". */
 const normalize = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase()
 
-export function SpecialtyPicker({ onSend }: { onSend: (options: MenuOption[]) => void }) {
-  const [chosen, setChosen] = useState<MenuOption[]>([])
+export function SpecialtyPicker({ onSend, initial = [] }: { onSend: (options: MenuOption[]) => void; initial?: MenuOption[] }) {
+  const [chosen, setChosen] = useState<MenuOption[]>(initial.slice(0, MAX_SPECIALTIES))
   const [open, setOpen] = useState<string | null>(null)
   const [query, setQuery] = useState("")
 
   const isChosen = (o: MenuOption) => chosen.some((c) => c.tab === o.tab && c.text === o.text)
   const toggle = (o: MenuOption) =>
-    setChosen((list) => isChosen(o) ? list.filter((c) => !(c.tab === o.tab && c.text === o.text)) : list.length < MAX_OPTIONS ? [...list, o] : list)
-  const full = chosen.length >= MAX_OPTIONS
+    setChosen((list) => isChosen(o) ? list.filter((c) => !(c.tab === o.tab && c.text === o.text)) : list.length < MAX_SPECIALTIES ? [...list, o] : list)
+  const full = chosen.length >= MAX_SPECIALTIES
 
   // Se busca por especialidad y por servicio; con pocos resultados se muestran abiertos.
   const q = normalize(query.trim())
@@ -44,7 +49,7 @@ export function SpecialtyPicker({ onSend }: { onSend: (options: MenuOption[]) =>
     <div className="picker">
       <div className="picker-row">
         <input placeholder="Buscar especialidad o servicio…" aria-label="Buscar especialidad o servicio" value={query} onChange={(e) => setQuery(e.target.value)} />
-        <button className="btn ghost sm" onClick={() => setChosen(EXAMPLE_SERVICES.map(([a, b]) => toOption(a, b)))}>Ejemplo</button>
+        <button className="btn ghost sm" onClick={() => setChosen(exampleSpecialties())}>Ejemplo</button>
       </div>
       <div className="picker-list">
         {visible.map((sp) => {
@@ -77,14 +82,15 @@ export function SpecialtyPicker({ onSend }: { onSend: (options: MenuOption[]) =>
       </div>
       {chosen.length > 0 && (
         <>
-          <p className="label">ASÍ SE VERÁN EN LA TABLET ({chosen.length}/{MAX_OPTIONS})</p>
+          <p className="label">ASÍ SE VERÁN EN LA TABLET ({chosen.length}/{MAX_SPECIALTIES})</p>
           <ol className="picker-chosen">
             {chosen.map((c, i) => <li key={i}><b>{i + 1}</b> {c.tab} · {c.text} <button onClick={() => toggle(c)} aria-label={`Quitar ${c.tab} · ${c.text}`}><Icon name="close" /></button></li>)}
+            <li className="muted"><b>{chosen.length + 1}</b> Otra · Mi especialidad no está aquí</li>
           </ol>
         </>
       )}
       <button className="btn primary picker-send" disabled={!chosen.length} onClick={() => onSend(chosen)}>
-        Enviar a la tablet ({chosen.length}/{MAX_OPTIONS}) <Icon name="arrow_forward" />
+        Enviar a la tablet ({chosen.length}/{MAX_SPECIALTIES}) <Icon name="arrow_forward" />
       </button>
     </div>
   )
