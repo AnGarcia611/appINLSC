@@ -24,8 +24,9 @@ export default function AdminApp() {
   const [gender, setGender] = useStored<Gender>("inlsc.gender", "m")
   const [side, setSide] = useStored<Side>("inlsc.side", "right")
   // Reconocimiento de la seña del número de la opción, en el trámite y en las infografías (además del toque). Beta: el funcionario siempre confirma.
-  // Apagado por defecto: en Ajustes1 (28-sep) se pidió que en las elecciones el señante solo toque, sin cámara.
-  const [signPref, setSignPref] = useStored<"on" | "off">("inlsc.signNumbers", "off")
+  // Encendido por defecto desde el 10-oct: las opciones numeradas son una forma más de elegir, como tocar (reemplaza lo de
+  // Ajustes1, que pedía solo toque). Clave nueva: un "apagado" guardado con la versión anterior (solo infografías) no aplica.
+  const [signPref, setSignPref] = useStored<"on" | "off">("inlsc.signNumbers2", "on")
   const signNumbers = signPref === "on"
   const [open, setOpen] = useState(false)
   const [manifest, setManifest] = useState<VideoManifest>({})
@@ -81,8 +82,15 @@ export default function AdminApp() {
               <p className="launcher-eyebrow">ATENCIÓN INCLUSIVA</p>
               <h2>¿Necesita ayuda?</h2>
               <p>Inicie una atención administrativa en Lengua de Señas Colombiana.</p>
-              {/* "Iniciar atención" arranca directo desde aquí, así que el intérprete también se elige aquí. */}
+              {/* "Iniciar atención" arranca directo desde aquí, así que el intérprete y la seña del número también se eligen aquí. */}
               <div className="launcher-gender"><span>Intérprete</span><GenderSwitch gender={gender} setGender={setGender} small /></div>
+              <div className="launcher-gender">
+                <span>Elegir con la seña del número</span>
+                <div className="seg sm" role="group" aria-label="Elegir opciones con la seña del número">
+                  <button className={signNumbers ? "on" : ""} aria-pressed={signNumbers} onClick={() => setSignPref("on")}>Sí</button>
+                  <button className={!signNumbers ? "on" : ""} aria-pressed={!signNumbers} onClick={() => setSignPref("off")}>No</button>
+                </div>
+              </div>
               <button className="launcher-start" onClick={startAttention}>{tablet ? "Iniciar atención" : "Conectar tablet"} <Icon name="arrow_forward" /></button>
               <p className={`launcher-note ${tablet ? "ok" : "off"}`}><Icon name={tablet ? "check_circle" : "link_off"} fill={tablet} /> {tablet ? "Tablet conectada" : "Tablet desconectada"} · Sesión {code}</p>
             </>
