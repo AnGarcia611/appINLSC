@@ -1,5 +1,7 @@
 # Plan: datos simulados a partir de la captura de S-9BST para la demo con manos
 
+> **Estado (10-oct-2026): ejecutado** (PR #10 y #11). Lo que se hizo, los resultados y en qué se apartó del plan están en la §9. Desde la PR #11 ya no hay simulación en el panel: el trámite se elige por seña o por toque en la tablet.
+
 > Plan del 9-oct-2026. Parte de la única captura disponible y la usa para completar el reconocimiento por manos en **una sola entrega**. Complementa [plan_reconocimiento_LSC.md](plan_reconocimiento_LSC.md).
 
 ## 0. Resumen
@@ -93,12 +95,12 @@ Son indispensables para que el sistema **no dispare** cuando no hay seña:
 
 ## 4. Qué se construye con esos datos
 
-### 4.1 Trámites (lo nuevo) → `src/vision/intents.ts`
+### 4.1 Trámites (lo nuevo) → `src/vision/signs.ts`
 
 - **Por fotograma:** posición de cada muñeca relativa a los hombros, forma de las 2 manos (`shapeVector`), distancia entre manos y velocidad.
 - **Clasificador:** DTW contra prototipos en TypeScript puro, sin dependencias, igual que `knn.ts`.
   - Los prototipos son **promedios** de muchas variantes sintéticas (unos 10 por clase), no tomas reales. Así el archivo pesa poco y no contiene ninguna toma de la persona.
-  - Archivo: `public/vision/intents.templates.json`.
+  - Archivo: `public/vision/signs.templates.json`.
 - **Rechazo:** si la mejor distancia supera un umbral (calibrado con *nada* y *otra*), responde "no entendí". Así el panel muestra *Validación requerida* o *Repetir seña*.
 - **Decide a los ~3 s** de empezar la seña, o al bajar la mano, lo que llegue primero (por el tope de 6 s de la captura).
 - **Plan B**, si DTW no llega al 90 %: una red pequeña (1D-CNN) en PyTorch → ONNX → `onnxruntime-web`. Agrega ~10 MB solo en la tablet. Solo si hace falta.
@@ -138,8 +140,8 @@ Son indispensables para que el sistema **no dispare** cuando no hay seña:
 | Paso | Archivos | Tiempo |
 |---|---|---|
 | 1. Generador de datos simulados | `scripts/simular.ts`, `src/capture/synth.ts` + pruebas | 1.5 días |
-| 2. Evaluador y matriz de confusión | `scripts/evaluar.ts`, `src/capture/eval.ts` | 0.5 días |
-| 3. Reconocedor de trámites y sí/no con la mano + rechazo | `src/vision/intents.ts`, `dtw.ts`; `dataset.ts` genera `intents.templates.json` | 2 días |
+| 2. Evaluador y matriz de confusión | `scripts/evaluar.ts`, `src/capture/evaluate.ts` | 0.5 días |
+| 3. Reconocedor de trámites y sí/no con la mano + rechazo | `src/vision/signs.ts`, `dtw.ts`; `dataset.ts` genera `signs.templates.json` | 2 días |
 | 4. Números: plantillas, pulgar y rechazo; cabeza solo sin manos | `numbers.ts`, `head.ts` | 1 día |
 | 5. Conexión con el flujo | `types.ts`, `session.ts`, `StepControls.tsx`, `SignPanel.tsx`, `TabletApp.tsx` | 1 día |
 | 6. Ajuste de umbrales con el evaluador + documentación | `README.md`, este plan | 0.5 días |

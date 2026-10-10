@@ -28,7 +28,7 @@
 | Página de captura y validación `/?captura`, envío por correo | ✅ | `app/src/capture/` |
 | Laboratorio de diagnóstico `/?lab` (fps, GPU/CPU, dedos, resultados; `&src=videos/x.mp4` analiza un video) | ✅ (reemplaza la vista `?tablet&debug` del paso 1) | `app/src/vision/VisionLab.tsx` |
 | `npm run dataset` (valida paquetes, informe, plantillas) y `npm test` (15 pruebas con manos sintéticas) | ✅ | `scripts/dataset.ts`, `app/test/` |
-| Intención del trámite (paso `detect`) | ⏳ sigue simulada: no hay datos. La página de captura ya graba las 3 intenciones | — |
+| Intención del trámite (paso `detect`) | ✅ con la captura de S-9BST + datos simulados (ver `plan_datos_sinteticos.md`). En la tablet también se puede tocar | `app/src/vision/signs.ts` |
 | Variantes manuales de sí/no, Web Worker, modo sin conexión con service worker, modelo ONNX | ⏳ fases siguientes | — |
 
 > **Nota (Ajustes1, 28-sep):** el dueño pidió que en las elecciones (especialidades, citas, horarios) el señante **solo toque** y que no se muestre la cámara. Por eso la seña del número queda como preferencia del panel ("Solo toque" / "Toque o seña del número"), **apagada por defecto**. Hay que decidir con el dueño si se activa.
@@ -142,7 +142,7 @@ Cada paso se puede entregar y probar por separado.
    - `npm i -E @mediapipe/tasks-vision@0.10.35`.
    - `scripts/prepare-vision.mjs`, con un comando `npm run vision`: copia `node_modules/@mediapipe/tasks-vision/wasm` a `public/vision/wasm` y descarga una vez los `.task` a `public/vision/models`. Se hace commit de esos archivos, como ya se hace con los videos.
    - Agregarlo a `deploy.yml` antes de `npm run build`.
-   - `src/vision/landmarks.ts`: inicializa con `FilesetResolver.forVisionTasks(import.meta.env.BASE_URL + "vision/wasm")`, aplica el respaldo de GPU a CPU y recorre los fotogramas con `requestVideoFrameCallback`.
+   - `src/vision/tracker.ts` (en el plan, `landmarks.ts`): inicializa con `FilesetResolver.forVisionTasks(import.meta.env.BASE_URL + "vision/wasm")`, aplica el respaldo de GPU a CPU y recorre los fotogramas con `requestVideoFrameCallback`.
    - Vista `?tablet&debug` que dibuja el esqueleto sobre la cámara y muestra FPS y delegado. **Probarla en el iPad y la tablet Android reales antes de seguir.**
 2. **Características y segmentación** (≈ 2 días)
    - `features.ts`: centra en la muñeca, escala por el tamaño de la palma, calcula los 15 ángulos de articulación y la normal de la palma, y corrige el espejo de la cámara frontal. Se identifica la mano dominante, la más alta o la que más se mueve.
