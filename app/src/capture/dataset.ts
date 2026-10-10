@@ -139,8 +139,8 @@ export function signWindows(take: Take, aspect: number): number[][][] {
   return out
 }
 
-/** Prototipos por etiqueta: hay 3 trámites, sí, no y 2 clases de rechazo. */
-const PROTOTYPES: Record<string, number> = { asignar: 36, cancelar: 36, facturar: 36, "sí": 24, no: 24, nada: 24, otra: 40 }
+/** Prototipos por etiqueta: hay 3 trámites, sí, no y 3 clases de rechazo. */
+const PROTOTYPES: Record<string, number> = { asignar: 36, cancelar: 36, facturar: 36, "sí": 24, no: 24, nada: 24, otra: 40, "otra-externa": 40 }
 const MAX_CANDIDATES = 420
 
 /** Junta ventanas por etiqueta con muestreo de reservorio (memoria acotada aunque haya miles de tomas). */
@@ -156,8 +156,10 @@ export class WindowPool {
     const aspect = pkg.camera ? pkg.camera.width / pkg.camera.height : 16 / 9
     for (const take of pkg.takes) {
       if (filter && !filter(take)) continue
-      const label = signLabel(take.task)
-      if (!label) continue
+      const base = signLabel(take.task)
+      if (!base) continue
+      // Las otras señas de datasets públicos tienen su propia clase: son muchas y desplazarían a las de los señantes propios.
+      const label = base === "otra" && pkg.origin ? "otra-externa" : base
       // Los números son muchos y solo sirven de rechazo: se toma 1 de cada 3.
       if (take.task.startsWith("num-") && hashSeed(take.id) % 3) continue
       for (const w of signWindows(take, aspect)) this.add(label, w)
@@ -240,7 +242,7 @@ export function buildSignTemplates(pool: WindowPool, calibration: WindowPool, no
   }
   const own: number[] = []
   for (const [label, { list }] of calibration.byLabel) {
-    if (label === "nada" || label === "otra") continue
+    if (label === "nada" || label === "otra" || label === "otra-externa") continue
     const mine = prototypes.filter((p) => p.label === label)
     if (!mine.length) continue
     for (const w of list.slice(0, 120)) { const d = Math.min(...mine.map((p) => dtw(w, p.s))); if (Number.isFinite(d)) own.push(d) }

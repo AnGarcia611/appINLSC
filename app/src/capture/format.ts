@@ -34,6 +34,8 @@ export interface Take {
    * En datos públicos es el señante, para medir con personas que el modelo no vio. Sin grupo: cada toma es su grupo.
    */
   group?: string
+  /** Qué seña es en realidad cuando la etiqueta no lo dice, p. ej. "GRACIAS" en una toma de "otra" de un dataset público. */
+  note?: string
 }
 
 /** Paquete importado de un dataset público (no viene de `/?captura`). */

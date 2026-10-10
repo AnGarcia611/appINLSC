@@ -1,6 +1,6 @@
 // Reconocimiento de señas con movimiento: trámites (asignar, cancelar, facturar) y sí / no con la mano.
 // Compara la ventana reciente de la seña con prototipos (DTW + k vecinos). Los prototipos y los umbrales salen de
-// `npm run dataset` (tomas reales + datos simulados). Hay clases de rechazo ("nada", "otra"): si la seña se parece
+// `npm run dataset` (tomas reales + datos simulados). Hay clases de rechazo ("nada", "otra", "otra-externa"): si la seña se parece
 // más a una de ellas, o no se parece a nada conocido, no se emite resultado.
 import { dtw } from "./dtw.ts"
 import { MotionTrack } from "./motion.ts"
@@ -29,7 +29,8 @@ export interface SeqGuess { value: string; confidence: number }
 export interface SeqResult extends SeqGuess { alternatives: SeqGuess[] }
 
 /** Etiquetas que nunca se emiten: existen para que el reconocedor sepa decir "esto no es una seña de la lista". */
-export const REJECT_LABELS = ["nada", "otra"]
+/** "otra-externa": otras señas de personas de datasets públicos (LSC50, videos); van aparte para no desplazar a las propias. */
+export const REJECT_LABELS = ["nada", "otra", "otra-externa"]
 export const INTENT_LABELS = ["asignar", "cancelar", "facturar"]
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x))

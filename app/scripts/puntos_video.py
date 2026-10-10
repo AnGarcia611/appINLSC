@@ -162,14 +162,16 @@ def make_take(take_id: str, task: str, label: str, frames, group: str):
     }
 
 
-def write_package(out: Path, pkg_id: str, signer_code: str, takes, camera, origin: dict):
+def write_package(out: Path, pkg_id: str, signer_code: str, takes, camera, origin: dict, app: dict | None = None):
     """Un paquete `inlsc-captura` v1 (comprimido) con las tomas de una persona de un dataset público."""
-    import mediapipe as mp
+    if app is None:
+        import mediapipe as mp
+        app = {"mediapipe": f"python {mp.__version__}", "models": {"hands": "hand_landmarker.task", "pose": "pose_landmarker_lite.task"}}
     now = datetime.now(timezone.utc).isoformat()
     w, h = camera
     pkg = {
         "format": "inlsc-captura", "version": 1, "id": pkg_id, "createdAt": now, "updatedAt": now,
-        "app": {"mediapipe": f"python {mp.__version__}", "models": {"hands": "hand_landmarker.task", "pose": "pose_landmarker_lite.task"}},
+        "app": app,
         "camera": {"width": w, "height": h},
         "consent": {"version": f"{origin['license']} · {origin['dataset']}", "acceptedAt": now, "training": True, "evaluation": True},
         "signer": {"code": signer_code, "profile": {}},

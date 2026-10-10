@@ -143,7 +143,11 @@ python3 -m venv ~/inlsc-publicos/.venv && ~/inlsc-publicos/.venv/bin/pip install
 ~/inlsc-publicos/.venv/bin/python scripts/importar_lsc54.py ~/inlsc-publicos/lsc54-videos ~/inlsc-publicos/lsc54
 # Cualquier otro video (archivos de un canal, videos del proyecto): lista CSV con archivo, etiqueta, señante, tramo y fuente
 ~/inlsc-publicos/.venv/bin/python scripts/importar_videos.py lista.csv ~/inlsc-publicos/otra-fuente
+# LSC50 (Uniandes, CC BY 4.0): 50 señas cotidianas de 5 personas, ya en puntos → 1000 tomas de "otra" seña
+python3 scripts/importar_lsc50.py ~/inlsc-publicos/descargas/LSC50_LANDMARKS.zip ~/inlsc-publicos/lsc50
 ```
+
+**Videos de YouTube sin descargarlos:** en `/?lab` → **YouTube** se ve el video en el reproductor oficial y, al compartir la pestaña, se graban solo sus puntos como paquete de captura con la fuente citada (`src/vision/YouTubeSource.tsx`). Pasos en `../GUIA_PRUEBAS_LSC.md` §1.8.
 
 > ⚠️ Guarde los paquetes recibidos **fuera de este repositorio** (es público). Los scripts se niegan a leer o escribir carpetas dentro del repo.
 
@@ -160,5 +164,7 @@ python3 -m venv ~/inlsc-publicos/.venv && ~/inlsc-publicos/.venv/bin/pip install
 Son resultados de **una sola persona**: no dicen cuánto acierta con otros señantes. Con otra persona en la demo, conviene grabar antes 15 min con `/?captura` y volver a correr `npm run dataset`.
 
 **Con personas nuevas (LSC-54, 18 señantes que el modelo no vio):** en las 372 tomas donde la seña se ve al menos 0.3 s, los números 1–5 aciertan 80 % y 6–9 el 58 %. Cuando el reconocedor responde, la forma de la mano (1–5, o la base de 6–9) es la correcta el 98 % de las veces. El error está en separar el número quieto del que tiene movimiento (2 ↔ 7), y en las señas muy rápidas: en 113 tomas la mano se ve menos de 0.3 s y no se emite nada, a propósito, para no reaccionar a parpadeos del detector. Por eso el funcionario siempre confirma, y conviene pedir en pantalla que se sostenga la seña.
+
+**Otras señas de personas nuevas (LSC50 y videos del proyecto).** Antes, el reconocedor de trámites se disparaba con el 31 % de las 1000 señas cotidianas de LSC50 (gracias, por favor, ¿dónde?…, 5 personas) y con el 33 % de las frases de los videos del proyecto. Las plantillas ahora incluyen esas señas en una clase de rechazo aparte (`otra-externa`), para que no desplacen a las del señante propio. Separando por persona, los disparos falsos bajan a 1 % (LSC50) y 24 % (videos del proyecto), y el señante propio sigue igual (24/24, 1 % de disparos falsos). Las plantillas citan LSC50 (`sources`).
 
 **6–9 fabricados y flexión a medias** (`flexTake` en `synth.ts`): cada persona simulada convierte la mitad de las tomas de 1–4 en 6–9, doblando y estirando las articulaciones de esos dedos 1–4 veces, a 1.4–3.6 Hz y con distinta profundidad. El detector de flexión (`flexCycles`) ya no usa umbrales fijos: cuenta bajadas y subidas desde el último pico y valle. Con flexiones a medias pasa de 8 % a 56 % de acierto; con 6–9 de personas nuevas, de 51 % a 58 %; las tomas propias quedan igual.

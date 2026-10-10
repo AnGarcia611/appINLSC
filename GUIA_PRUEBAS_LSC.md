@@ -141,7 +141,24 @@ Con la mano levantada, pruebe esto. **No debería aparecer ningún número:**
 | `…/?lab&src=videos/seleccion_m.mp4` | Analizar un video de la intérprete en lugar de la cámara |
 | Botón **Video** + elegir un archivo | Analizar un video propio grabado con el celular |
 
-### 1.8 Qué anotar
+### 1.8 Sacar puntos de un video de YouTube (sin descargarlo)
+
+Sirve para usar videos de LSC con licencia Creative Commons como datos de prueba. Es manual: el navegador exige que una persona autorice compartir la pestaña.
+
+1. En **Chrome, Brave o Edge** (computador), abra `…/?lab&yt=jrIA55EGTU0` (o pulse **YouTube** arriba y pegue la dirección del video).
+2. Pulse **Analizar esta pestaña**. El navegador pregunta qué compartir: elija **esta pestaña** y acepte.
+3. En **Guardar puntos**, elija qué se seña (para videos de otras señas: **Otra seña**) y escriba quién seña (p. ej. `UMNG-01`).
+4. Pulse **Grabar** y reproduzca el video. Puede usar velocidad **0.5×**: los tiempos se guardan en tiempo del video.
+5. Al terminar, pulse **Parar** y **Exportar paquete**. Se descarga un archivo `.json.gz` solo con puntos.
+6. Muévalo a `~/inlsc-publicos/youtube-puntos/` y mida:
+
+```bash
+cd /Users/andresgarcia/appINLSC/app && npm run evaluar -- ~/inlsc-datos ~/inlsc-publicos/youtube-puntos --publicos-solo-medir
+```
+
+Verifique la licencia en la descripción del video y anote la cita (el paquete ya la lleva). El navegador integrado de Claude no permite compartir pestañas: hay que hacerlo en su navegador.
+
+### 1.9 Qué anotar
 
 | Dato | Dónde verlo | Valor esperado |
 |---|---|---|

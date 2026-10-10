@@ -49,6 +49,14 @@ Búsqueda del 10-oct-2026. InLSC es un trabajo de grado, sin fines comerciales: 
    - Sirve como más "otras señas".
    - Aporta variedad regional; la Universidad del Atlántico es de la costa.
 
+## Lo que ya se usó (10-oct-2026)
+
+- **Videos del proyecto** (`Videos_señantes`, procesados con `importar_videos.py`): 3 solicitudes de trámite de un señante nuevo (2 de 3 bien) y 33 frases de otras personas o avatares, usadas como "otras señas".
+- **LSC50** (Uniandes, CC BY 4.0): no es de YouTube; trae los puntos ya calculados. 1000 señas cotidianas de 5 personas, usadas como "otras señas".
+  - Bajó los disparos falsos de trámites con personas nuevas del 31 % al 1 %.
+  - Ya entra a las plantillas publicadas, con la cita.
+- **YouTube sin descargar:** en `/?lab` → **YouTube**. Pasos en `GUIA_PRUEBAS_LSC.md` §1.8. Primer video sugerido: [Cordialidades (UMNG)](https://www.youtube.com/watch?v=jrIA55EGTU0).
+
 ## Uso responsable en el trabajo de grado
 
 - **Citar cada video.** Formato APA 7, por ejemplo:

@@ -28,8 +28,13 @@ if (!numbers.templates.length) {
   process.exit(1)
 }
 // Atribución: las plantillas se publican y las licencias de los datasets públicos piden citarlos.
-const sources = [...new Set(packages.flatMap((p) => (p.origin ? [`${p.origin.citation} · ${p.origin.license} · ${p.origin.url}`] : [])))]
-if (sources.length) { numbers.sources = sources; signs.sources = sources; console.log(`\nDatasets públicos (se citan en las plantillas):\n  ${sources.join("\n  ")}`) }
+// Cada archivo cita solo las fuentes que aportaron: las de números, solo si traían tomas de números.
+const cite = (keep: (p: (typeof packages)[number]) => boolean) =>
+  [...new Set(packages.filter((p) => p.origin && keep(p)).map((p) => [p.origin!.citation, p.origin!.license, p.origin!.url].filter(Boolean).join(" · ")))]
+const numberSources = cite((p) => p.takes.some((t) => t.task.startsWith("num-")))
+const signSources = cite(() => true)
+if (numberSources.length) numbers.sources = numberSources
+if (signSources.length) { signs.sources = signSources; console.log(`\nDatasets públicos (se citan en las plantillas):\n  ${signSources.join("\n  ")}`) }
 const out = path.join(root, "public/vision")
 fs.mkdirSync(out, { recursive: true })
 fs.writeFileSync(path.join(out, "numbers.templates.json"), JSON.stringify(numbers))
