@@ -12,7 +12,7 @@ Cada panel del funcionario abre una **sesión** con un código de 6 caracteres (
 - El código se conserva al recargar el panel, y la tablet recuerda el último código: si algo se desconecta, ambos se reconectan solos.
 - *↻ Nueva sesión* genera otro código y desconecta las tablets actuales. En la tablet, *Cambiar código* aparece mientras no hay conexión.
 - **Una sola tablet por PC.** Si otra tablet intenta unirse a una sesión ocupada, ve *"Esta sesión ya tiene una tablet conectada"*. La misma tablet (misma pestaña) sí puede recargar y reconectarse.
-- **Estado explícito.** PC y tablet se envían un latido cada 2 s; si no llega nada en 6 s, el otro extremo se da por perdido. El PC muestra *Tablet conectada / desconectada* y la tablet muestra un indicador y un aviso a pantalla completa cuando no hay conexión.
+- **Estado explícito.** PC y tablet se envían un latido cada 2 s y cada uno responde al del otro (así no se corta si la pestaña del panel queda en segundo plano). Sin noticias en 7 s se muestra *Conexión inestable* sin bloquear nada; en 20 s el otro extremo se da por perdido: el PC muestra *Sin tablet* y la tablet un aviso a pantalla completa. Al reconectarse o volver a primer plano, la tablet pide la pantalla actual y sigue donde iba.
 - **Sin tablet no se avanza.** No se puede iniciar una atención ni avanzar pasos. Si la tablet se pierde a mitad de una atención, esta queda **en pausa** y continúa en el mismo paso al reconectarse (*Cancelar atención* sigue disponible).
 
 Hay dos modos de transporte (`src/shared/sync.ts`):
@@ -51,7 +51,7 @@ INLSC_HTTP=1 PORT=5175 VITE_SYNC=relay npm start   # abrir http://localhost:5175
 
 ## Requisitos
 
-- Node 20 o superior (en Mac: `brew install node`; en Windows: instalador de nodejs.org)
+- Node 22.18 o superior (los scripts ejecutan `.ts` directamente; en Mac: `brew install node`; en Windows: instalador de nodejs.org)
 - PC y tablet en la **misma red WiFi**, sin aislamiento de clientes
 
 ## Puesta en marcha

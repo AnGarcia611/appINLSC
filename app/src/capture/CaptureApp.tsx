@@ -195,7 +195,9 @@ function ConsentScreen({ onAccept }: { onAccept: (c: CapturePackage["consent"]) 
   const [participate, setParticipate] = useState(false)
   const [training, setTraining] = useState(true)
   const [evaluation, setEvaluation] = useState(true)
-  const ok = participate && (training || evaluation)
+  // Menores de edad: la Ley 1581 exige la autorización de su representante legal, y este flujo no la recoge.
+  const [adult, setAdult] = useState(false)
+  const ok = participate && adult && (training || evaluation)
   return (
     <section className="cap-card">
       <h1>Autorización de uso de datos</h1>
@@ -209,13 +211,14 @@ function ConsentScreen({ onAccept }: { onAccept: (c: CapturePackage["consent"]) 
       <fieldset className="cap-checks">
         <legend>Marque lo que autoriza</legend>
         <label><input type="checkbox" checked={participate} onChange={(e) => setParticipate(e.target.checked)} /> Leí (o me explicaron) esta información y quiero participar.</label>
+        <label><input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} /> Tengo <b>18 años o más</b>.</label>
         <label><input type="checkbox" checked={training} onChange={(e) => setTraining(e.target.checked)} /> Autorizo usar mis tomas para <b>entrenar</b> el reconocimiento de señas.</label>
         <label><input type="checkbox" checked={evaluation} onChange={(e) => setEvaluation(e.target.checked)} /> Autorizo usar mis tomas para <b>medir</b> qué tan bien funciona el reconocimiento.</label>
       </fieldset>
       <button className="cap-btn primary" disabled={!ok} onClick={() => onAccept({ version: CONSENT_VERSION, acceptedAt: new Date().toISOString(), training, evaluation })}>
         Acepto y continúo <Icon name="arrow_forward" />
       </button>
-      {!ok && <p className="cap-muted">Para continuar marque la primera casilla y al menos un uso.</p>}
+      {!ok && <p className="cap-muted">Para continuar marque las dos primeras casillas y al menos un uso. Por ahora no pueden participar menores de edad.</p>}
     </section>
   )
 }
@@ -224,7 +227,7 @@ const OPTIONS: { key: keyof Profile; label: string; values: string[] }[] = [
   { key: "audicion", label: "Usted es", values: ["sordo", "hipoacúsico", "oyente"] },
   { key: "rol", label: "Uso de la LSC", values: ["usuario LSC", "intérprete", "docente o modelo LSC", "otro"] },
   { key: "mano", label: "Mano con la que más seña", values: ["derecha", "izquierda", "ambas"] },
-  { key: "edad", label: "Edad", values: ["menos de 18", "18–29", "30–44", "45–59", "60 o más"] },
+  { key: "edad", label: "Edad", values: ["18–29", "30–44", "45–59", "60 o más"] },
   { key: "aniosLSC", label: "Años usando LSC", values: ["menos de 2", "2–5", "6–10", "más de 10"] },
 ]
 

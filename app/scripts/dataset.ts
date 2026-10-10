@@ -6,7 +6,8 @@
 // ⚠️ La carpeta de paquetes debe estar FUERA de este repositorio: el repo es público y los paquetes son datos biométricos.
 import fs from "node:fs"
 import path from "node:path"
-import { report } from "../src/capture/dataset.ts"
+import { report, signTemplateProblems } from "../src/capture/dataset.ts"
+import { INTENT_LABELS } from "../src/vision/signs.ts"
 import { trainModels } from "../src/capture/evaluate.ts"
 import { loadPackages, option, positional, root } from "./packages.ts"
 
@@ -29,8 +30,14 @@ if (!numbers.templates.length) {
 const out = path.join(root, "public/vision")
 fs.mkdirSync(out, { recursive: true })
 fs.writeFileSync(path.join(out, "numbers.templates.json"), JSON.stringify(numbers))
-fs.writeFileSync(path.join(out, "signs.templates.json"), JSON.stringify(signs))
-const labels = [...new Set(signs.prototypes.map((p) => p.label))].map((l) => `${l} ${signs.prototypes.filter((p) => p.label === l).length}`).join(" · ")
 console.log(`\n✓ ${numbers.templates.length} formas de número → public/vision/numbers.templates.json`)
-console.log(`✓ ${signs.prototypes.length} prototipos (${labels}) · near ${signs.near} · far ${signs.far} → public/vision/signs.templates.json`)
+const problems = signTemplateProblems(signs, INTENT_LABELS)
+if (problems.length) {
+  // Un archivo así haría que la tablet nunca reconozca un trámite: se deja el anterior.
+  console.warn(`✗ No se modifica public/vision/signs.templates.json: ${problems.join("; ")}`)
+} else {
+  fs.writeFileSync(path.join(out, "signs.templates.json"), JSON.stringify(signs))
+  const labels = [...new Set(signs.prototypes.map((p) => p.label))].map((l) => `${l} ${signs.prototypes.filter((p) => p.label === l).length}`).join(" · ")
+  console.log(`✓ ${signs.prototypes.length} prototipos (${labels}) · near ${signs.near} · far ${signs.far} → public/vision/signs.templates.json`)
+}
 console.log(`  ${numbers.signers} señante(s) real(es) · ${((Date.now() - t0) / 1000).toFixed(0)} s`)

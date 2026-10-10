@@ -41,7 +41,8 @@ export function classifyWindow(seq: number[][], file: SeqTemplateFile, k = 7): {
   let total = 0
   for (const n of top) { const w = 1 / (n.d + 0.05); total += w; scores.set(n.label, (scores.get(n.label) ?? 0) + w) }
   const nearest = top[0].d
-  const fit = nearest <= file.near ? 1 : clamp01(1 - (nearest - file.near) / (file.far - file.near))
+  const span = file.far - file.near
+  const fit = nearest <= file.near ? 1 : span > 0 ? clamp01(1 - (nearest - file.near) / span) : 0
   for (const [label, w] of scores) scores.set(label, (w / total) * fit)
   return { scores, nearest }
 }

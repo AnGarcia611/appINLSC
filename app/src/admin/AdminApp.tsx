@@ -98,9 +98,9 @@ export default function AdminApp() {
               <strong>InLSC</strong>
               <span>{session.path ? <><Icon name={session.path.icon} /> {session.path.name}</> : session.active ? "Nueva atención · Recepción" : "Recepción"}</span>
             </div>
-            <span className={`status ${tablet ? "ok" : "off"}`} title="Estado de la tablet">
-              <Icon name={tablet ? "check_circle" : sync.online ? "link_off" : "wifi_off"} fill={tablet} />
-              {tablet ? "Tablet conectada" : sync.online ? "Sin tablet" : "Sin conexión"}
+            <span className={`status ${tablet ? (sync.weak ? "weak" : "ok") : "off"}`} title="Estado de la tablet" role="status">
+              <Icon name={tablet ? (sync.weak ? "sync" : "check_circle") : sync.online ? "link_off" : "wifi_off"} fill={tablet && !sync.weak} />
+              {tablet ? (sync.weak ? "Conexión inestable" : "Tablet conectada") : sync.online ? "Sin tablet" : "Sin conexión"}
             </span>
             <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Minimizar panel"><Icon name="remove" /></button>
           </header>

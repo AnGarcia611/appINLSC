@@ -26,7 +26,9 @@ export default defineConfig({
  */
 function inlscSync(): Plugin {
   // Mismo valor que PEER_TIMEOUT_MS en src/shared/sync.ts.
-  const PEER_TIMEOUT_MS = 6000
+  const PEER_TIMEOUT_MS = 20000
+  /** Un mensaje de estado pesa unos KB: más que esto es un error o un abuso. */
+  const MAX_BODY = 256 * 1024
   interface Tablet { res: ServerResponse; device: string; lastSeen: number }
   interface Room { admin: Set<ServerResponse>; tablet: Tablet | null; lastState: string | null }
   const rooms = new Map<string, Room>()
@@ -36,18 +38,26 @@ function inlscSync(): Plugin {
     const code = q.get("session") ?? ""
     let room = rooms.get(code)
     if (!room) rooms.set(code, (room = { admin: new Set(), tablet: null, lastState: null }))
-    return { room, role: q.get("role") === "tablet" ? "tablet" as const : "admin" as const, device: q.get("device") ?? "" }
+    return { code, room, role: q.get("role") === "tablet" ? "tablet" as const : "admin" as const, device: q.get("device") ?? "" }
   }
 
   const write = (res: ServerResponse, data: string) => { try { res.write(`data: ${data}\n\n`) } catch { /* conexión cerrada */ } }
   const toAdmins = (room: Room, data: string) => room.admin.forEach((res) => write(res, data))
 
+  /** Cuerpo del POST, o null si supera MAX_BODY. */
   const readBody = (req: Connect.IncomingMessage) =>
-    new Promise<string>((resolve) => {
+    new Promise<string | null>((resolve) => {
       let body = ""
-      req.on("data", (c: Buffer) => { body += c.toString() })
+      req.on("data", (c: Buffer) => {
+        body += c.toString()
+        if (body.length > MAX_BODY) { resolve(null); req.destroy() }
+      })
       req.on("end", () => resolve(body))
+      req.on("error", () => resolve(null))
     })
+
+  /** Una sala sin panel ni tablet se borra (si no, `rooms` crece con cada código de sesión). */
+  const cleanup = (code: string, room: Room) => { if (!room.admin.size && !room.tablet) rooms.delete(code) }
 
   function localIPs() {
     return Object.values(os.networkInterfaces())
@@ -63,7 +73,7 @@ function inlscSync(): Plugin {
     })
 
     app.use("/api/events", (req, res) => {
-      const { room, role, device } = params(req)
+      const { code, room, role, device } = params(req)
       // Sin cabecera "Connection": está prohibida en HTTP/2 (Vite usa HTTP/2 con HTTPS).
       res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" })
       res.write(": ok\n\n")
@@ -85,6 +95,7 @@ function inlscSync(): Plugin {
         req.on("close", () => {
           clearInterval(ping)
           if (room.tablet === me) { room.tablet = null; toAdmins(room, JSON.stringify({ type: "bye" })) }
+          cleanup(code, room)
         })
       } else {
         room.admin.add(res)
@@ -92,23 +103,28 @@ function inlscSync(): Plugin {
           clearInterval(ping)
           room.admin.delete(res)
           if (!room.admin.size && room.tablet) write(room.tablet.res, JSON.stringify({ type: "bye" }))
+          cleanup(code, room)
         })
       }
     })
 
     app.use("/api/send", async (req, res) => {
       if (req.method !== "POST") { res.statusCode = 405; res.end(); return }
-      const { room, role, device } = params(req)
+      const { code, room, role, device } = params(req)
       const body = await readBody(req)
+      if (body === null) { res.statusCode = 413; res.end(); cleanup(code, room); return }
+      let msg: { type?: string }
+      try { msg = JSON.parse(body) } catch { res.statusCode = 400; res.end(); cleanup(code, room); return }
       if (role === "tablet") {
         // Solo la tablet aceptada en la sala puede hablar con el panel.
-        if (room.tablet?.device !== device) { res.statusCode = 409; res.end(); return }
+        if (room.tablet?.device !== device) { res.statusCode = 409; res.end(); cleanup(code, room); return }
         room.tablet.lastSeen = Date.now()
         toAdmins(room, body)
       } else {
-        if ((JSON.parse(body) as { type?: string }).type === "state") room.lastState = body
+        if (msg.type === "state") room.lastState = body
         if (room.tablet) write(room.tablet.res, body)
       }
+      cleanup(code, room)
       res.end("ok")
     })
   }

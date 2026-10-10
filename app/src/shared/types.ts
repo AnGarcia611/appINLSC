@@ -57,7 +57,9 @@ export type TabletEvent =
 
 /** Mensajes entre el panel y la tablet (por el servidor local o por WebRTC). */
 export type WireMessage =
-  | { type: "state"; state: TabletState } // panel → tablet
+  /** `n`: contador creciente del panel; la tablet descarta un estado más viejo que llegue tarde (el relé no garantiza orden). */
+  | { type: "state"; state: TabletState; n?: number } // panel → tablet
+  | { type: "hello" } //                     → panel: la tablet se (re)conecta o vuelve a primer plano; pide el estado actual
   | { type: "event"; event: TabletEvent } // tablet → panel
   | { type: "hb" } //                        latido, en ambos sentidos
   | { type: "bye" } //                       el otro extremo se desconectó

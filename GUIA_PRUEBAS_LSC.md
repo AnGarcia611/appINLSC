@@ -1,6 +1,6 @@
 # Guía de pruebas: reconocimiento de señas LSC
 
-Qué se puede probar hoy en la rama `reconocimiento-lsc`, paso a paso y con lo que debería verse en cada paso.
+Qué se puede probar hoy en `main`, paso a paso y con lo que debería verse en cada paso.
 
 **Orden recomendado:**
 
@@ -18,21 +18,21 @@ Qué se puede probar hoy en la rama `reconocimiento-lsc`, paso a paso y con lo q
 
 ### Iniciar el servidor
 
-En la terminal, desde la carpeta del worktree:
+En la terminal, desde la carpeta del proyecto:
 
 ```bash
-cd /Users/andresgarcia/appINLSC/.claude/worktrees/reconocimiento-lsc/app
+cd /Users/andresgarcia/appINLSC/app
 ```
 
 ```bash
-PORT=5176 npm run dev
+npm run dev
 ```
 
 Debe mostrar algo como:
 
 ```
-➜  Local:   https://localhost:5176/
-➜  Network: https://192.168.78.164:5176/
+➜  Local:   https://localhost:5173/
+➜  Network: https://192.168.78.164:5173/
 ```
 
 > La IP de la red (`192.168.…`) puede cambiar. Use la que muestre la terminal.
@@ -41,10 +41,10 @@ Debe mostrar algo como:
 
 | Pantalla | En el computador | En la tablet |
 |---|---|---|
-| Panel del funcionario | https://localhost:5176/ | — |
-| Tablet del señante | — | La del QR del panel: `https://<IP>:5176/?tablet&s=<código>` |
-| Laboratorio | https://localhost:5176/?lab | `https://<IP>:5176/?lab` |
-| Captura de señas | https://localhost:5176/?captura | `https://<IP>:5176/?captura` |
+| Panel del funcionario | https://localhost:5173/ | — |
+| Tablet del señante | — | La del QR del panel: `https://<IP>:5173/?tablet&s=<código>` |
+| Laboratorio | https://localhost:5173/?lab | `https://<IP>:5173/?lab` |
+| Captura de señas | https://localhost:5173/?captura | `https://<IP>:5173/?captura` |
 
 ### Dos reglas que evitan casi todos los problemas
 
@@ -60,7 +60,7 @@ Debe mostrar algo como:
 
 La forma más rápida de ver si funciona. No necesita tablet ni panel.
 
-1. Abra **https://localhost:5176/?lab** y permita la cámara.
+1. Abra **https://localhost:5173/?lab** y permita la cámara.
 2. Espere a que a la derecha, en **Estado**, diga `GPU · N fps` o `CPU · N fps`. Mientras diga "cargando modelos…" todavía no reconoce nada.
 3. Ubíquese de modo que **se vean su cabeza y sus hombros**.
 4. **Levante una mano por encima del codo**, a la altura del pecho o de la cara.
@@ -138,7 +138,7 @@ Prueba la integración real: el señante hace la seña en la tablet y el funcion
 
 ### 2.1 Preparar
 
-1. En el computador abra **https://localhost:5176/**.
+1. En el computador abra **https://localhost:5173/**.
 2. En la ventanita "¿Necesita ayuda?" pulse **Conectar tablet**. Se abre el panel con el QR.
 3. En el panel, en **Selección en las infografías**, elija **Toque o seña del número**.
    - Debajo del panel debe decir: `MODO DEMO · trámite simulado · seña del número real (beta)`.
@@ -155,7 +155,7 @@ En el panel:
 | Inicio | **Iniciar atención** |
 | Saludo | **Continuar** |
 | Solicitud | **Activar cámara** |
-| Detección del trámite (sigue **simulada**) | **Simular reconocimiento** → esperar 2 s → **Confirmar: Asignación de cita** |
+| Detección del trámite | El señante hace la seña de "pedir una cita" (o toca **Asignación de cita** en la tablet) → esperar el resultado → **Confirmar: Asignación de cita** |
 | Documento | **Documento recibido** |
 | Especialidad | **Ejemplo** → **Enviar a la tablet** |
 
@@ -182,7 +182,7 @@ Termine o cancele la atención. En el panel elija **Selección en las infografí
 
 ## 3. Página de captura de señas
 
-Es la página para que las personas sordas graben señas y las envíen. Se usa en la tablet o en el computador: **https://localhost:5176/?captura**.
+Es la página para que las personas sordas graben señas y las envíen. Se usa en la tablet o en el computador: **https://localhost:5173/?captura**.
 
 > ⚠️ El texto de autorización es un **borrador** pendiente de revisión legal y la página lo indica. Pruébela usted mismo; no la use todavía con participantes reales.
 
@@ -193,7 +193,7 @@ Es la página para que las personas sordas graben señas y las envíen. Se usa e
 | Perfil | Responda o deje en blanco → **Continuar y activar la cámara** | Permita la cámara. Aparece la lista de señas con su progreso (`0 de 86 tomas`) |
 | Una seña | Toque **Número 3** | Muestra la referencia y pregunta **¿Usted hace esta seña así?** |
 | Validación | **Sí, así la hago** (o **La hago distinto** + comentario) | Aparece la cámara con esqueleto y el botón **Grabar** |
-| Grabar | **Grabar** → cuenta 3-2-1 → haga la seña → **baje la mano** | La grabación se corta sola al bajar la mano (máximo 6 s). Luego se **repite el esqueleto sin video** |
+| Grabar | **Grabar** → cuenta 3-2-1 → haga la seña → **baje la mano** | La grabación se corta sola al bajar la mano (máximo 10 s). Luego se **repite el esqueleto sin video** |
 | Revisar | **Guardar** o **Repetir** | Con Guardar, el contador pasa a `Toma 2 de 5` |
 | Avisos de calidad | Grabe sin levantar la mano | Dice "No se vio la mano levantada…" |
 | Cabeza | **Sí (con la cabeza)** → Grabar → asienta | Graba 3 s fijos |
@@ -227,12 +227,12 @@ Después de confirmar que el correo llegó: **Ya se envió: borrar de la tablet*
 2. Ejecute:
 
 ```bash
-cd /Users/andresgarcia/appINLSC/.claude/worktrees/reconocimiento-lsc/app && npm run dataset -- ~/inlsc-datos
+cd /Users/andresgarcia/appINLSC/app && npm run dataset -- ~/inlsc-datos
 ```
 
 **Debería ver:**
 - un informe con tomas por seña y por señante, perfiles, respuestas "la hago distinto" con sus comentarios, y aciertos y errores de las pruebas (`hizo→entendió`);
-- al final: `✓ N plantillas de M señantes → public/vision/numbers.templates.json`.
+- al final: `✓ N formas de número → public/vision/numbers.templates.json` y `✓ N prototipos … → public/vision/signs.templates.json`.
 
 Con ese archivo, el reconocedor usa también las formas de mano reales de los señantes (k vecinos), además de las reglas. Recargue `?lab` para probarlo.
 
@@ -243,7 +243,7 @@ Si la carpeta está dentro del repositorio, el script se niega a leerla. Es inte
 ## 5. Pruebas automáticas
 
 ```bash
-cd /Users/andresgarcia/appINLSC/.claude/worktrees/reconocimiento-lsc/app && npm test
+cd /Users/andresgarcia/appINLSC/app && npm test
 ```
 
 Debe terminar con `pass 15`, `fail 0`. Prueban el motor con manos sintéticas: formas 1–5, movimiento 6–9, rechazo de puño o reposo, cabeza sí/no, formato de captura y plantillas.
@@ -254,9 +254,9 @@ Debe terminar con `pass 15`, `fail 0`. Prueban el motor con manos sintéticas: f
 
 | Síntoma | Causa | Solución |
 |---|---|---|
-| "El navegador bloquea la cámara porque esta dirección no usa HTTPS" | Se abrió con `http://<IP>` | Use `https://<IP>:5176/…`, o `http://localhost` en el mismo computador |
+| "El navegador bloquea la cámara porque esta dirección no usa HTTPS" | Se abrió con `http://<IP>` | Use `https://<IP>:5173/…`, o `http://localhost` en el mismo computador |
 | "La conexión no es privada" | Certificado de desarrollo | Aceptarlo una vez por equipo (ver §0) |
-| El panel no ve la tablet | Panel y tablet en servidores o puertos distintos, o en redes WiFi distintas | Ambos en `…:5176`, misma WiFi |
+| El panel no ve la tablet | Panel y tablet en servidores o puertos distintos, o en redes WiFi distintas | Ambos en `…:5173`, misma WiFi |
 | "Preparando reconocimiento…" no termina | Los modelos no cargaron | Recargue. Revise que existan `app/public/vision/models/*.task` y `app/public/vision/wasm/` (`npm run vision`) |
 | No aparece el esqueleto | Mala luz o mano fuera del cuadro | Más luz de frente, sin contraluz, mano dentro del recuadro |
 | Hay esqueleto pero no salen números | La mano no está por encima del codo, o no se queda quieta ~1 s | Levante más la mano y sostenga la forma |
@@ -268,7 +268,7 @@ Debe terminar con `pass 15`, `fail 0`. Prueban el motor con manos sintéticas: f
 
 | Real | Simulado o pendiente |
 |---|---|
-| Reconocimiento de números 1–9 (beta) en la tablet | **Detección del trámite** (asignar, cancelar, facturar): sigue con **Simular reconocimiento**, porque no hay datos |
+| Reconocimiento de números 1–9 y del trámite (asignar, cancelar, facturar), en prueba | Probarlo con más señantes: hoy está entrenado con una sola persona |
 | Sí/no con la cabeza (en `?lab` y `?captura`) | Sí/no dentro del flujo de atención: ningún paso lo pide todavía |
 | Página de captura y envío por correo | Consentimiento definitivo y su video en LSC |
 | Informe y plantillas con `npm run dataset` | Precisión medida con señantes reales |

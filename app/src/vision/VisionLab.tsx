@@ -36,10 +36,16 @@ export default function VisionLab() {
     const blocked = cameraBlockedReason()
     if (blocked) { setError(blocked); return }
     let s: MediaStream | null = null
+    let cancelled = false
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 } }, audio: false })
-      .then((x) => { s = x; setStream(x) })
-      .catch(() => setError("No se pudo abrir la cámara. Revise el permiso de cámara del navegador."))
-    return () => { s?.getTracks().forEach((t) => t.stop()); setStream(null) }
+      .then((x) => {
+        // Si ya se cambió de fuente (o se desmontó) antes de que llegara la cámara, se apaga enseguida.
+        if (cancelled) { x.getTracks().forEach((t) => t.stop()); return }
+        s = x
+        setStream(x)
+      })
+      .catch(() => { if (!cancelled) setError("No se pudo abrir la cámara. Revise el permiso de cámara del navegador.") })
+    return () => { cancelled = true; s?.getTracks().forEach((t) => t.stop()); setStream(null) }
   }, [source])
 
   const add = (text: string) => setLog((l) => [{ at: new Date().toLocaleTimeString(), text }, ...l].slice(0, 30))

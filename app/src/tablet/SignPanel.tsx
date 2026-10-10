@@ -11,12 +11,14 @@ interface Props {
   recognize: Extract<Recognize, { task: "number" }>
   /** Del estado actual: al cambiar (otro paso u otras opciones) se reinicia el reconocimiento. */
   seq: number
-  onSign: (result: NumberResult) => void
+  /** `seq`: el del estado con el que se creó el reconocedor (no el actual): un resultado de otro paso se descarta en el panel. */
+  onSign: (result: NumberResult, seq: number) => void
 }
 
 /** Cámara pequeña + lo que la tablet entendió. Todo se procesa aquí: el video no sale de la tablet. */
 export default function SignPanel({ stream, recognize, seq, onSign }: Props) {
   const recognizer = useRef<NumberRecognizer | null>(null)
+  const recognizerSeq = useRef(seq)
   const [status, setStatus] = useState<VisionStatus>({ state: "cargando" })
   const [phase, setPhase] = useState<RecognizerPhase>("reposo")
   const [last, setLast] = useState<NumberResult | null>(null)
@@ -29,7 +31,7 @@ export default function SignPanel({ stream, recognize, seq, onSign }: Props) {
     setLast(null)
     setPhase("reposo")
     loadNumberTemplates().then((templates) => {
-      if (alive) recognizer.current = new NumberRecognizer({ max: recognize.max, templates })
+      if (alive) { recognizer.current = new NumberRecognizer({ max: recognize.max, templates }); recognizerSeq.current = seq }
     })
     return () => { alive = false }
   }, [seq, recognize.max])
@@ -39,7 +41,7 @@ export default function SignPanel({ stream, recognize, seq, onSign }: Props) {
     if (!r) return
     const result = r.push(frame)
     setPhase((p) => (p === r.phase ? p : r.phase))
-    if (result) { setLast(result); send.current(result) }
+    if (result) { setLast(result); send.current(result, recognizerSeq.current) }
   }
 
   const sure = last && last.confidence >= 70

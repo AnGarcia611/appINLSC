@@ -47,6 +47,7 @@ export default function VisionCamera({ stream, src, onFrame, onStatus, skeleton 
   useEffect(() => {
     let stopped = false
     let handle = 0
+    let usesVideoFrame = false
     let last = 0
     let lastVideoTime = -1
     let frames = 0
@@ -60,9 +61,8 @@ export default function VisionCamera({ stream, src, onFrame, onStatus, skeleton 
       cb.current.onStatus?.({ state: "listo", delegate: tracker.delegate, fps: 0 })
       const schedule = () => {
         if (stopped) return
-        handle = "requestVideoFrameCallback" in video
-          ? video.requestVideoFrameCallback(tick)
-          : requestAnimationFrame(tick)
+        usesVideoFrame = "requestVideoFrameCallback" in video
+        handle = usesVideoFrame ? video.requestVideoFrameCallback(tick) : requestAnimationFrame(tick)
       }
       const tick = () => {
         const now = performance.now()
@@ -94,8 +94,9 @@ export default function VisionCamera({ stream, src, onFrame, onStatus, skeleton 
 
     return () => {
       stopped = true
-      if ("cancelVideoFrameCallback" in video) video.cancelVideoFrameCallback(handle)
-      cancelAnimationFrame(handle)
+      // Cada API tiene sus propios números: cancelar con la otra podía cortar un bucle ajeno (p. ej. la repetición).
+      if (usesVideoFrame) video.cancelVideoFrameCallback(handle)
+      else cancelAnimationFrame(handle)
     }
   }, [])
 

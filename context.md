@@ -1,6 +1,8 @@
 # InLSC: contexto del proyecto
 
 > Documento armado a partir de los materiales del repositorio (26-sep-2026). Todavía **no hay código propio en el repo**. Lo que hay son especificaciones, recursos gráficos, videos y un prototipo exportado de Figma Make.
+>
+> **Nota (10-oct-2026):** este documento describe el proyecto **antes** de escribir la app. Hoy el código está en `app/` (ver `app/README.md`) y el servicio de correo en `captura-mail/`. Las menciones a `src/App.tsx`, `CITAS_MOCK` o la detección simulada de las secciones 5 y 6 se refieren al prototipo de Figma (`figma/App Builder.zip`), no a la app actual: en la app el reconocimiento del trámite y de los números es real (en prueba).
 
 ## 1. ¿Qué es?
 

@@ -395,6 +395,8 @@ export interface SimulateOptions {
   seed: number
   /** Solo se simulan las tomas que cumplan esta condición (p. ej. las de entrenamiento de un grupo). */
   filter?: (take: Take) => boolean
+  /** Para qué se simula: entrenar (por defecto) exige permiso de entrenar; evaluar, permiso de evaluar. */
+  purpose?: "training" | "evaluation"
 }
 
 /** Tareas que se simulan como "otra" al revés: señas con movimiento propio. */
@@ -402,10 +404,11 @@ const REVERSIBLE = new Set(["tramite-asignar", "tramite-cancelar", "tramite-fact
 
 /**
  * Un paquete simulado por persona: una variante de cada toma real + negativos (nada y otra).
- * Solo usa paquetes con permiso para entrenar.
+ * Solo usa paquetes con permiso para ese fin (entrenar, por defecto, o evaluar).
  */
 export function* simulate(packages: CapturePackage[], opts: SimulateOptions): Generator<CapturePackage> {
-  const sources = packages.filter((p) => p.consent.training && !p.synthetic)
+  const purpose = opts.purpose ?? "training"
+  const sources = packages.filter((p) => p.consent[purpose] && !p.synthetic)
   for (let k = 0; k < opts.personas; k++) {
     const pid = `SIM-${String(k + 1).padStart(3, "0")}`
     const r = rng(hashSeed(`${opts.seed}:${pid}`))

@@ -76,6 +76,7 @@ input, select { font: inherit; }
 .status { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 99px; white-space: nowrap; }
 .status.ok { color: var(--ok); background: #e6f4ea; }
 .status.off { color: var(--err); background: #fdecec; }
+.status.weak { color: #8a5a00; background: #fff4d6; }
 /* Botón de icono Material: contenedor de 40 px y área táctil de 48 px (WCAG 2.5.8 / Material 3). */
 .icon-btn { position: relative; flex: none; border: 1px solid var(--line); background: #fff; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; font-size: 20px; color: var(--text); }
 .icon-btn::after { content: ""; position: absolute; inset: -4px; }
@@ -220,6 +221,7 @@ input, select { font: inherit; }
 .conn-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; padding: 5px 12px; border-radius: 99px; white-space: nowrap; }
 .conn-badge.ok { color: var(--ok); background: #e6f4ea; }
 .conn-badge.off { color: var(--err); background: #fdecec; }
+.conn-badge.weak { color: #8a5a00; background: #fff4d6; }
 .conn-overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px; background: rgba(13, 63, 112, 0.82); backdrop-filter: blur(4px); }
 .conn-overlay.lost, .conn-overlay.rejected { background: rgba(122, 31, 31, 0.85); }
 .conn-card { max-width: 560px; background: #fff; border-radius: 20px; padding: 32px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); }
