@@ -141,7 +141,7 @@ Con la mano levantada, pruebe esto. **No debería aparecer ningún número:**
 | `…/?lab&src=videos/seleccion_m.mp4` | Analizar un video de la intérprete en lugar de la cámara |
 | Botón **Video** + elegir un archivo | Analizar un video propio grabado con el celular |
 
-### 1.6 Qué anotar
+### 1.8 Qué anotar
 
 | Dato | Dónde verlo | Valor esperado |
 |---|---|---|
