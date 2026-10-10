@@ -21,7 +21,8 @@ export interface Notice { title: string; text: string }
 export type TabletView =
   | { kind: "idle"; message?: string }
   | { kind: "video"; notice?: Notice }
-  | { kind: "detect"; options: { icon: IconName; text: string }[]; detected: number | null }
+  /** Detección del trámite: opciones numeradas (1 asignar, 2 cancelar, 3 facturar) que se tocan o se piden con seña. */
+  | { kind: "detect"; options: { icon: IconName; text: string }[]; detected: number | null; instruction: string }
   | { kind: "menu"; title: string; instruction: string; options: MenuOption[]; selected: number | null }
   | { kind: "horarios"; instruction: string; slots: Slot[]; selected: number | null }
   | { kind: "valor"; amount: number }
@@ -39,8 +40,11 @@ export interface TabletState {
   recognize?: Recognize
 }
 
-/** Seña del número de una opción (1..max), o seña libre del trámite (asignar, cancelar, facturar). */
-export type Recognize = { task: "number"; max: number } | { task: "tramite" }
+/**
+ * Seña del número de una opción (1..max), o seña libre del trámite (asignar, cancelar, facturar).
+ * En el trámite, `numbers`: también vale la seña del número de la opción (1..numbers), si el funcionario lo activó.
+ */
+export type Recognize = { task: "number"; max: number } | { task: "tramite"; numbers?: number }
 
 /** Número (o índice del trámite en PATHS) reconocido con su confianza (0–100). */
 export interface SignGuess { value: number; confidence: number }
@@ -52,8 +56,9 @@ export type TabletEvent =
   /**
    * Seña reconocida en la tablet. `seq` es el del estado que la pidió: el panel descarta resultados de otro paso.
    * task "number": `value` = número 1..max · task "tramite": `value` = índice del trámite en PATHS.
+   * `by` (solo trámite): con la seña libre del trámite o con la seña del número de la opción.
    */
-  | { type: "sign"; seq: number; task: "number" | "tramite"; value: number; confidence: number; alternatives: SignGuess[] }
+  | { type: "sign"; seq: number; task: "number" | "tramite"; value: number; confidence: number; alternatives: SignGuess[]; by?: "seña" | "número" }
 
 /** Mensajes entre el panel y la tablet (por el servidor local o por WebRTC). */
 export type WireMessage =

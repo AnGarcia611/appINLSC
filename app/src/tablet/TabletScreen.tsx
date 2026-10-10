@@ -71,13 +71,13 @@ export default function TabletScreen({ state, stream, cameraError, preview, stat
               <div className="tab-chips">
                 {view.options.map((o, i) => (
                   <button key={o.text} className={`tab-chip ${view.detected === i ? "is-match" : ""}`} aria-pressed={view.detected === i} onClick={() => select(i)}>
-                    <Icon name={o.icon} />{o.text}{view.detected === i && <Icon name="check_circle" fill label="Elegido" />}
+                    <span className="tab-chip-num">{i + 1}</span><Icon name={o.icon} />{o.text}{view.detected === i && <Icon name="check_circle" fill label="Elegido" />}
                   </button>
                 ))}
               </div>
             </section>
             <aside className="tab-right">
-              <Instruction text="Haga la seña de su solicitud o toque su opción" icon="front_hand" />
+              <Instruction text={view.instruction} icon="front_hand" />
               {video && <LscVideo video={video} seq={seq} compact />}
             </aside>
           </div>

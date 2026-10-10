@@ -317,6 +317,9 @@ input, select { font: inherit; }
 .tab-chip { flex: 1; display: flex; gap: 10px; align-items: center; justify-content: center; border: 2px solid var(--line); border-radius: 14px; padding: 14px; font-size: 20px; font-weight: 700; color: var(--muted); }
 button.tab-chip { font-family: inherit; background: #fff; cursor: pointer; min-height: 56px; }
 .tab-chip.is-match { border-color: var(--ok); background: #e6f4ea; color: var(--ok); }
+/* Número de la opción del trámite (1, 2, 3): se puede tocar o pedir con la seña del número. */
+.tab-chip-num { flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--blue-dark); color: #fff; font-weight: 800; font-size: 18px; display: grid; place-items: center; }
+.tab-chip.is-match .tab-chip-num { background: var(--ok); }
 
 /* Opciones con aspecto de botón: borde, sombra inferior que "se hunde" al tocar y, al elegir, contorno verde y ✓.
    3 columnas en la tablet (2 si hay 4 opciones o menos). Sin partición automática con guion ("dermato-lógica"):
@@ -477,6 +480,7 @@ button.tab-chip { font-family: inherit; background: #fff; cursor: pointer; min-h
   .tab-slot-time { font-size: 14px; }
   .tab-chips { gap: 8px; }
   .tab-chip { font-size: 14px; padding: 6px; gap: 6px; border-radius: 10px; }
+  .tab-chip-num { width: 24px; height: 24px; font-size: 13px; }
   .tab-guide span { font-size: 12px; }
   .tab-live { top: 6px; left: 6px; font-size: 11px; padding: 2px 8px; }
   .tab-sign-status { font-size: 13px; padding: 5px 10px; bottom: 6px; }
