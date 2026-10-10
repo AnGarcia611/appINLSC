@@ -94,7 +94,7 @@ Misma forma que 1–4, con la palma hacia la cámara, **doblando y estirando los
 | 8 | 3 | Los tres dedos se doblan y se estiran |
 | 9 | 4 | Los cuatro dedos se doblan y se estiran |
 
-**Debería ver:** `Número 7 · … · movimiento`.
+**Debería ver:** `Número 7 · … · movimiento`. En **Movimiento (6–9 y rechazo)**, el contador **Ciclos de flexión** sube con cada doblez; con 2 ciclos sale el número.
 
 A veces primero sale el número estático (p. ej. 2) y, al hacer la flexión, se corrige a 7. Es lo esperado: si se queda quieto antes de mover los dedos, primero parece un 2.
 
@@ -103,7 +103,28 @@ A veces primero sale el número estático (p. ej. 2) y, al hacer la flexión, se
 - **Asienta** 3 veces seguidas → `Cabeza: sí · …`.
 - **Niegue** de lado a lado 3 veces → `Cabeza: no · …`.
 
-### 1.4 Que NO reconozca cosas
+### 1.4 Trámites y sí/no con la mano
+
+Haga la seña completa con las manos levantadas y **baje las manos** al terminar.
+
+- **Pedir, cancelar o pagar una cita** → `Seña: asignar · …`, `Seña: cancelar · …` o `Seña: facturar · …`.
+- **Sí con la mano** (puño que se dobla en la muñeca) → `Seña: sí · …`.
+- **No con el índice** (índice de lado a lado) → `Seña: no · …`. **No** debe salir "Número 1": en **Vaivenes del índice** debe llegar a 8 o más.
+
+En **Seña con movimiento**, las barras muestran lo que se está comparando en vivo. Las grises (`nada`, `otra`) son de rechazo: si ganan, no sale nada.
+
+### 1.5 Probar una seña y llevar la cuenta
+
+Debajo de la cámara está **Probar una seña**:
+
+1. Toque la seña que va a hacer (por ejemplo **7** o **Cancelar una cita**). Arriba aparece cómo se hace.
+2. Haga la seña. Cada resultado queda en **Resultados** con ✓ o ✗.
+3. Si no salió nada, toque **No respondió**.
+4. En **Sin hacer señas** y **Otra seña cualquiera**, cualquier resultado cuenta como disparo falso (✗).
+
+Cada botón muestra la cuenta (verde ≥ 80 %, amarillo ≥ 50 %, rojo menos). Haga unas 5 pruebas por seña. La cuenta se borra al recargar la página.
+
+### 1.6 Que NO reconozca cosas
 
 Con la mano levantada, pruebe esto. **No debería aparecer ningún número:**
 - un puño cerrado;
@@ -112,7 +133,7 @@ Con la mano levantada, pruebe esto. **No debería aparecer ningún número:**
 
 ⚠️ **Limitación conocida:** cualquier forma de mano **sostenida** puede leerse como número. Por ejemplo, señalar con el índice da "1". Por eso en el flujo real el funcionario siempre confirma.
 
-### 1.5 Variantes del laboratorio
+### 1.7 Variantes del laboratorio
 
 | Dirección | Para qué |
 |---|---|
@@ -269,6 +290,6 @@ Debe terminar con `pass 15`, `fail 0`. Prueban el motor con manos sintéticas: f
 | Real | Simulado o pendiente |
 |---|---|
 | Reconocimiento de números 1–9 y del trámite (asignar, cancelar, facturar), en prueba | Probarlo con más señantes: hoy está entrenado con una sola persona |
-| Sí/no con la cabeza (en `?lab` y `?captura`) | Sí/no dentro del flujo de atención: ningún paso lo pide todavía |
+| Sí/no con la cabeza y con la mano (en `?lab` y `?captura`) | Sí/no dentro del flujo de atención: ningún paso lo pide todavía |
 | Página de captura y envío por correo | Consentimiento definitivo y su video en LSC |
 | Informe y plantillas con `npm run dataset` | Precisión medida con señantes reales |
