@@ -67,11 +67,16 @@ export function looksLikeOtherSign(samples: Sample[]): boolean {
   return wagSwings(samples) >= 8
 }
 
-/** Vaivenes del índice de lado a lado (cambios de sentido con histéresis de 0.12 rad). */
+/**
+ * Vaivenes del índice de lado a lado (cambios de sentido con histéresis de 0.12 rad).
+ * Solo con el índice estirado: al doblarlo (6–9) su ángulo también cambia y no es un NO.
+ */
 export function wagSwings(samples: Sample[]): number {
-  const mean = samples.reduce((a, s) => a + s.wag, 0) / samples.length
+  const straight = samples.filter((s) => s.ext[1] >= WAG_EXT)
+  if (!straight.length) return 0
+  const mean = straight.reduce((a, s) => a + s.wag, 0) / straight.length
   let state = 0, swings = 0
-  for (const s of samples) {
+  for (const s of straight) {
     const d = s.wag - mean
     if (d > 0.12 && state !== 1) { if (state) swings++; state = 1 }
     else if (d < -0.12 && state !== -1) { if (state) swings++; state = -1 }
@@ -79,9 +84,9 @@ export function wagSwings(samples: Sample[]): number {
   return swings
 }
 
+/** Extensión mínima del índice para contar su vaivén (NO con el índice). */
+const WAG_EXT = 0.7
 const SHAPE_MIN = 0.8 // forma clara: tolera dedos a medio camino, no un dedo del todo distinto
-const HIGH = 0.68 // extensión "dedos arriba"
-const LOW = 0.42 // extensión "dedos doblados"
 const WAG_STILL = 0.2 // rad: variación máxima del ángulo del índice en una forma "quieta" (números quietos: ≈ 0.02)
 
 /** Base más frecuente entre los fotogramas con forma clara (las fases dobladas de 6–9 no cuentan). */
@@ -96,19 +101,37 @@ export function dominantBase(samples: Sample[]): { base: number; share: number; 
 }
 
 /**
- * Ciclos completos de flexión (arriba → abajo → arriba) de los dedos de la base.
- * Una mano que entra cerrada y se abre (o se cierra al bajar) no cuenta: hace falta volver arriba.
+ * Detección de la flexión de 6–9. `top`: los dedos deben verse estirados para empezar a contar (y para cerrar
+ * cada ciclo); `drop`: lo que deben bajar desde el último pico y volver a subir desde el último valle;
+ * `held`: fotogramas seguidos con la forma hecha antes de contar la primera bajada.
+ * Medir desde los extremos propios, no contra umbrales fijos, cuenta también las flexiones a medias.
  */
-export function flexCycles(samples: Sample[], base: number): number {
+export const FLEX = { top: 0.75, drop: 0.2, held: 2 }
+/** Pausa sin mano que termina la seña de un número. */
+export let REST_MS = 500
+export const setRestMs = (ms: number) => { REST_MS = ms }
+
+/**
+ * Ciclos completos de flexión (arriba → abajo → arriba) de los dedos de la base.
+ * Una mano que entra cerrada y se abre (o se cierra al bajar) no cuenta: hace falta volver arriba
+ * después de haber sostenido la forma.
+ */
+export function flexCycles(samples: Sample[], base: number, opts = FLEX): number {
   const fingers = FLEX_FINGERS[base]
   if (!fingers) return 0
   let phase: "inicio" | "arriba" | "abajo" = "inicio"
-  let cycles = 0
+  let peak = 0, trough = 1, cycles = 0, held = 0
   for (const s of samples) {
     const e = fingers.reduce((a, f) => a + s.ext[f], 0) / fingers.length
-    if (phase === "inicio" && e > HIGH) phase = "arriba"
-    else if (phase === "arriba" && e < LOW) phase = "abajo"
-    else if (phase === "abajo" && e > HIGH) { cycles++; phase = "arriba" }
+    // La forma debe sostenerse `held` fotogramas: al subir, la mano pasa por formas a medias que no son una flexión.
+    if (phase === "inicio") { held = e > opts.top ? held + 1 : 0; if (held >= opts.held) { phase = "arriba"; peak = e } }
+    else if (phase === "arriba") {
+      peak = Math.max(peak, e)
+      if (e < peak - opts.drop) { phase = "abajo"; trough = e }
+    } else {
+      trough = Math.min(trough, e)
+      if (e > trough + opts.drop && e > opts.top) { cycles++; phase = "arriba"; peak = e }
+    }
   }
   return cycles
 }
@@ -121,6 +144,8 @@ export interface RecognizerOptions {
   max?: number
   /** Tiempo con la misma forma quieta para aceptar un número estático. */
   holdMs?: number
+  /** Tiempo sin mano levantada para dar por terminada la seña (el detector pierde la mano en las flexiones rápidas). */
+  restMs?: number
   templates?: Template[]
 }
 
@@ -141,7 +166,7 @@ export class NumberRecognizer {
   max: number
   private readonly holdMs: number
   private readonly templates: Template[]
-  private readonly segmenter = new Segmenter()
+  private readonly segmenter: Segmenter
   private buffer: Sample[] = []
   /**
    * Lo último emitido en esta seña: la forma base (1–5) y el tipo, ANTES de limitar a 1..max.
@@ -154,6 +179,7 @@ export class NumberRecognizer {
     this.max = opts.max ?? 9
     this.holdMs = opts.holdMs ?? 700
     this.templates = opts.templates ?? []
+    this.segmenter = new Segmenter({ restMs: opts.restMs ?? REST_MS })
   }
 
   reset() { this.segmenter.reset(); this.buffer = []; this.emitted = null; this.phase = "reposo"; this.live = null }

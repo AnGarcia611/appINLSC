@@ -132,6 +132,17 @@ npm test                            # pruebas del motor con manos sintéticas
 npm run dataset -- ~/inlsc-datos    # informe + plantillas: public/vision/numbers.templates.json y signs.templates.json
 npm run evaluar -- ~/inlsc-datos    # mide con tomas reales no vistas (≈ 1 min): aciertos, falsos disparos, matrices de confusión
 npm run simular -- ~/inlsc-datos ~/inlsc-datos/sinteticos   # opcional: escribe los paquetes simulados para revisarlos
+npm run evaluar -- ~/inlsc-datos ~/inlsc-publicos/lsc54 --publicos-solo-medir   # mide también con las 18 personas de LSC-54
+```
+
+**Datos públicos (LSC-54).** `scripts/importar_lsc54.py` convierte los videos de números de LSC-54 (18 señantes, Universidad de La Sabana, [CC BY-NC 4.0](https://doi.org/10.57760/sciencedb.25639)) al formato de captura, con los mismos modelos que la app y el encuadre de la tablet. Cada toma lleva su señante como grupo: `evaluar` prueba siempre con personas que el modelo no vio. Con `dataset`, una carpeta pública también entrena y queda citada en las plantillas (`sources`); hoy **no** se usa para entrenar porque no mejoró los números y empeoró un poco los trámites (ver abajo).
+
+```bash
+python3 -m venv ~/inlsc-publicos/.venv && ~/inlsc-publicos/.venv/bin/pip install mediapipe opencv-python-headless
+# Videos Numbers.zip (190 MB) de https://doi.org/10.57760/sciencedb.25639, descomprimido en ~/inlsc-publicos/lsc54-videos
+~/inlsc-publicos/.venv/bin/python scripts/importar_lsc54.py ~/inlsc-publicos/lsc54-videos ~/inlsc-publicos/lsc54
+# Cualquier otro video (archivos de un canal, videos del proyecto): lista CSV con archivo, etiqueta, señante, tramo y fuente
+~/inlsc-publicos/.venv/bin/python scripts/importar_videos.py lista.csv ~/inlsc-publicos/otra-fuente
 ```
 
 > ⚠️ Guarde los paquetes recibidos **fuera de este repositorio** (es público). Los scripts se niegan a leer o escribir carpetas dentro del repo.
@@ -147,3 +158,7 @@ npm run simular -- ~/inlsc-datos ~/inlsc-datos/sinteticos   # opcional: escribe 
 | Sí / no con la mano | 16/17 (94 %) | 38 % | No se usa en el flujo: se confunde con números. Queda para un paso de confirmación futuro |
 
 Son resultados de **una sola persona**: no dicen cuánto acierta con otros señantes. Con otra persona en la demo, conviene grabar antes 15 min con `/?captura` y volver a correr `npm run dataset`.
+
+**Con personas nuevas (LSC-54, 18 señantes que el modelo no vio):** en las 372 tomas donde la seña se ve al menos 0.3 s, los números 1–5 aciertan 80 % y 6–9 el 58 %. Cuando el reconocedor responde, la forma de la mano (1–5, o la base de 6–9) es la correcta el 98 % de las veces. El error está en separar el número quieto del que tiene movimiento (2 ↔ 7), y en las señas muy rápidas: en 113 tomas la mano se ve menos de 0.3 s y no se emite nada, a propósito, para no reaccionar a parpadeos del detector. Por eso el funcionario siempre confirma, y conviene pedir en pantalla que se sostenga la seña.
+
+**6–9 fabricados y flexión a medias** (`flexTake` en `synth.ts`): cada persona simulada convierte la mitad de las tomas de 1–4 en 6–9, doblando y estirando las articulaciones de esos dedos 1–4 veces, a 1.4–3.6 Hz y con distinta profundidad. El detector de flexión (`flexCycles`) ya no usa umbrales fijos: cuenta bajadas y subidas desde el último pico y valle. Con flexiones a medias pasa de 8 % a 56 % de acierto; con 6–9 de personas nuevas, de 51 % a 58 %; las tomas propias quedan igual.

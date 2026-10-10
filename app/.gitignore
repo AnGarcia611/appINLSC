@@ -3,3 +3,5 @@ dist
 .DS_Store
 # Copia de node_modules/@mediapipe/tasks-vision/wasm (scripts/prepare-vision.mjs)
 public/vision/wasm
+# Caché de Python (scripts/importar_lsc54.py)
+__pycache__

@@ -21,6 +21,8 @@ export interface SeqTemplateFile {
   near: number
   far: number
   prototypes: SeqPrototype[]
+  /** Datasets públicos usados, con su cita y licencia (obligatorio citarlos al publicar las plantillas). */
+  sources?: string[]
 }
 
 export interface SeqGuess { value: string; confidence: number }

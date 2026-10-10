@@ -29,7 +29,15 @@ export interface Take {
   frames: CompactFrame[]
   /** Solo en tomas simuladas (`synth.ts`): id de la toma real de la que salió. */
   source?: string
+  /**
+   * Grupo para separar entrenamiento y prueba: las tomas del mismo grupo van siempre al mismo lado.
+   * En datos públicos es el señante, para medir con personas que el modelo no vio. Sin grupo: cada toma es su grupo.
+   */
+  group?: string
 }
+
+/** Paquete importado de un dataset público (no viene de `/?captura`). */
+export interface Origin { dataset: string; license: string; citation: string; url: string }
 
 /** Respuesta de la validación de vocabulario: ¿así hace usted esta seña? */
 export interface Validation { task: string; matches: boolean; comment?: string; at: string }
@@ -70,6 +78,8 @@ export interface CapturePackage {
   trials: Trial[]
   /** Solo en paquetes simulados: no son de una persona real y nunca se usan para evaluar. */
   synthetic?: { from: string; persona: string; seed: number }
+  /** Solo en paquetes importados de un dataset público (`scripts/importar_lsc54.py`). */
+  origin?: Origin
 }
 
 const r4 = (x: number) => Math.round(x * 1e4) / 1e4

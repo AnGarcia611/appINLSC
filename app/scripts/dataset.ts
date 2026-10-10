@@ -1,5 +1,5 @@
 // Procesa los paquetes recibidos por correo desde la página de captura (/?captura).
-//   npm run dataset -- <carpeta con los paquetes> [--personas 40] [--semilla 1]
+//   npm run dataset -- <carpeta con los paquetes> [<otra carpeta>…] [--personas 40] [--semilla 1]
 // Con las tomas reales y sus variantes simuladas (src/capture/synth.ts) genera, sin datos personales:
 //   public/vision/numbers.templates.json  formas de mano de los números (ángulos)
 //   public/vision/signs.templates.json    prototipos de trámites y sí/no con la mano (trayectorias relativas al cuerpo)
@@ -9,14 +9,14 @@ import path from "node:path"
 import { report, signTemplateProblems } from "../src/capture/dataset.ts"
 import { INTENT_LABELS } from "../src/vision/signs.ts"
 import { trainModels } from "../src/capture/evaluate.ts"
-import { loadPackages, option, positional, root } from "./packages.ts"
+import { loadFolders, option, positional, root } from "./packages.ts"
 
-const [dir] = positional()
-if (!dir) {
-  console.error("Uso: npm run dataset -- <carpeta con los paquetes> [--personas 40] [--semilla 1]")
+const dirs = positional()
+if (!dirs.length) {
+  console.error("Uso: npm run dataset -- <carpeta con los paquetes> [<otra carpeta>…] [--personas 40] [--semilla 1]")
   process.exit(1)
 }
-const packages = loadPackages(dir).filter((p) => !p.synthetic)
+const packages = loadFolders(dirs).filter((p) => !p.synthetic)
 console.log(report(packages))
 
 const personas = option("personas", 40)
@@ -27,6 +27,9 @@ if (!numbers.templates.length) {
   console.error("\n✗ No hay tomas de números utilizables: no se modifican las plantillas.")
   process.exit(1)
 }
+// Atribución: las plantillas se publican y las licencias de los datasets públicos piden citarlos.
+const sources = [...new Set(packages.flatMap((p) => (p.origin ? [`${p.origin.citation} · ${p.origin.license} · ${p.origin.url}`] : [])))]
+if (sources.length) { numbers.sources = sources; signs.sources = sources; console.log(`\nDatasets públicos (se citan en las plantillas):\n  ${sources.join("\n  ")}`) }
 const out = path.join(root, "public/vision")
 fs.mkdirSync(out, { recursive: true })
 fs.writeFileSync(path.join(out, "numbers.templates.json"), JSON.stringify(numbers))

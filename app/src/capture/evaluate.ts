@@ -23,7 +23,10 @@ export function expected(task: Task, take: Pick<Take, "task" | "label">): string
   }
 }
 
-export interface Outcome { task: Task; take: string; from: string; source: "real" | "simulada"; expected: string | null; got: string | null; confidence: number | null
+export interface Outcome { task: Task; take: string; from: string; source: "real" | "simulada"
+  /** De dónde salió la toma: "propias" (`/?captura`) o el nombre del dataset público. */
+  dataset: string
+  expected: string | null; got: string | null; confidence: number | null
   /** Milisegundos desde que se levantó la mano hasta el resultado. */
   ms: number | null
 }
@@ -99,16 +102,17 @@ export function evaluate(packages: CapturePackage[], opts: EvalOptions): Outcome
     const t0 = Date.now()
     const train = (t: Take) => foldOf(t, opts.folds) !== f
     const models = trainModels(real, { personas: opts.personas, seed: opts.seed + f, filter: train })
-    const record = (take: Take, source: Outcome["source"], aspect: number) => {
-      const res = runTake(take, models, aspect)
-      for (const task of tasks) outcomes.push({ task, take: take.id, from: take.task, source, expected: expected(task, take), got: res[task].got, confidence: res[task].confidence, ms: res[task].ms })
+    const record = (take: Take, source: Outcome["source"], pkg: CapturePackage) => {
+      const res = runTake(take, models, aspectOf(pkg))
+      const dataset = pkg.origin?.dataset ?? "propias"
+      for (const task of tasks) outcomes.push({ task, take: take.id, from: take.task, source, dataset, expected: expected(task, take), got: res[task].got, confidence: res[task].confidence, ms: res[task].ms })
     }
     let n = 0
     for (const pkg of real.filter((p) => p.consent.evaluation)) {
-      for (const take of pkg.takes.filter((t) => !train(t))) { record(take, "real", aspectOf(pkg)); n++ }
+      for (const take of pkg.takes.filter((t) => !train(t))) { record(take, "real", pkg); n++ }
     }
     for (const sim of simulate(real, { personas: opts.testPersonas, seed: opts.seed + 5000 + f, filter: (t) => !train(t), purpose: "evaluation" })) {
-      for (const take of sim.takes) record(take, "simulada", aspectOf(sim))
+      for (const take of sim.takes) record(take, "simulada", sim)
     }
     opts.log?.(`grupo ${f + 1}/${opts.folds}: ${n} tomas reales de prueba · ${models.numbers.templates.length} formas · ${models.signs.prototypes.length} prototipos · near ${models.signs.near} far ${models.signs.far} · ${((Date.now() - t0) / 1000).toFixed(0)} s`)
   }
@@ -119,17 +123,19 @@ export function evaluate(packages: CapturePackage[], opts: EvalOptions): Outcome
 
 const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)} %` : "—")
 
-export interface Summary { task: Task; source: Outcome["source"]; hits: number; total: number; falseTriggers: number; negatives: number; lowConfidence: number }
+export interface Summary { task: Task; source: Outcome["source"]; dataset: string; hits: number; total: number; falseTriggers: number; negatives: number; lowConfidence: number }
+
+const datasetsOf = (outcomes: Outcome[]) => [...new Set(outcomes.map((o) => o.dataset))].sort((a, b) => (a === "propias" ? -1 : b === "propias" ? 1 : a.localeCompare(b)))
 
 export function summarize(outcomes: Outcome[]): Summary[] {
   const out: Summary[] = []
   for (const task of ["números", "trámites", "sí/no mano", "cabeza"] as Task[]) {
-    for (const source of ["real", "simulada"] as const) {
-      const xs = outcomes.filter((o) => o.task === task && o.source === source)
+    for (const source of ["real", "simulada"] as const) for (const dataset of datasetsOf(outcomes)) {
+      const xs = outcomes.filter((o) => o.task === task && o.source === source && o.dataset === dataset)
       const pos = xs.filter((o) => o.expected !== null)
       const neg = xs.filter((o) => o.expected === null)
       out.push({
-        task, source,
+        task, source, dataset,
         hits: pos.filter((o) => o.got === o.expected).length, total: pos.length,
         lowConfidence: pos.filter((o) => o.got === o.expected && (o.confidence ?? 0) < 70).length,
         falseTriggers: neg.filter((o) => o.got !== null).length, negatives: neg.length,
@@ -143,23 +149,24 @@ export function summarize(outcomes: Outcome[]): Summary[] {
 export function evaluationReport(outcomes: Outcome[]): string {
   const lines: string[] = []
   lines.push("Aciertos con las señas de cada reconocedor y falsos disparos con las demás tomas")
-  lines.push("(real = tomas reales no vistas al entrenar · simulada = variantes de esas mismas tomas)\n")
-  lines.push(`${"reconocedor".padEnd(12)} ${"fuente".padEnd(9)} ${"aciertos".padStart(16)} ${"con conf. < 70".padStart(15)} ${"falsos disparos".padStart(20)}`)
+  lines.push("(real = tomas reales no vistas al entrenar · simulada = variantes de esas mismas tomas)")
+  lines.push("(en datasets públicos se separa por señante: las tomas de prueba son de personas que el modelo no vio)\n")
+  lines.push(`${"reconocedor".padEnd(12)} ${"fuente".padEnd(20)} ${"aciertos".padStart(18)} ${"con conf. < 70".padStart(15)} ${"falsos disparos".padStart(20)}`)
   for (const s of summarize(outcomes)) {
     if (!s.total && !s.negatives) continue
-    lines.push(`${s.task.padEnd(12)} ${s.source.padEnd(9)} ${`${s.hits}/${s.total} (${pct(s.hits, s.total)})`.padStart(16)} ${String(s.lowConfidence).padStart(15)} ${`${s.falseTriggers}/${s.negatives} (${pct(s.falseTriggers, s.negatives)})`.padStart(20)}`)
+    lines.push(`${s.task.padEnd(12)} ${`${s.source} · ${s.dataset}`.padEnd(20)} ${`${s.hits}/${s.total} (${pct(s.hits, s.total)})`.padStart(18)} ${String(s.lowConfidence).padStart(15)} ${`${s.falseTriggers}/${s.negatives} (${pct(s.falseTriggers, s.negatives)})`.padStart(20)}`)
   }
   const lat = outcomes.filter((o) => o.task === "trámites" && o.source === "real" && o.got !== null && o.got === o.expected && o.ms !== null).map((o) => o.ms!).sort((a, b) => a - b)
   if (lat.length) lines.push(`\nTrámites: resultado a los ${(lat[Math.floor(lat.length / 2)] / 1000).toFixed(1)} s de levantar la mano (mediana; el más lento ${(lat[lat.length - 1] / 1000).toFixed(1)} s)`)
-  for (const task of ["números", "trámites", "sí/no mano", "cabeza"] as Task[]) {
-    const xs = outcomes.filter((o) => o.task === task && o.source === "real" && o.expected !== null)
+  for (const task of ["números", "trámites", "sí/no mano", "cabeza"] as Task[]) for (const dataset of datasetsOf(outcomes)) {
+    const xs = outcomes.filter((o) => o.task === task && o.source === "real" && o.dataset === dataset && o.expected !== null)
     if (!xs.length) continue
-    lines.push(`\nMatriz de confusión · ${task} · tomas reales`)
+    lines.push(`\nMatriz de confusión · ${task} · tomas reales · ${dataset}`)
     const rows = [...new Set(xs.map((o) => o.expected!))].sort((a, b) => a.localeCompare(b, "es", { numeric: true }))
     const cols = [...new Set([...rows, ...xs.map((o) => o.got ?? "—")])].sort((a, b) => a.localeCompare(b, "es", { numeric: true }))
     lines.push(`${"".padEnd(10)}${cols.map((c) => c.padStart(9)).join("")}`)
     for (const r of rows) lines.push(`${r.padEnd(10)}${cols.map((c) => String(xs.filter((o) => o.expected === r && (o.got ?? "—") === c).length || "·").padStart(9)).join("")}`)
-    const neg = outcomes.filter((o) => o.task === task && o.source === "real" && o.expected === null && o.got !== null)
+    const neg = outcomes.filter((o) => o.task === task && o.source === "real" && o.dataset === dataset && o.expected === null && o.got !== null)
     if (neg.length) {
       const by = new Map<string, number>()
       for (const o of neg) { const k = `${o.from}→${o.got}`; by.set(k, (by.get(k) ?? 0) + 1) }

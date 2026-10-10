@@ -3,7 +3,11 @@
 export interface Template { label: number; v: number[] }
 
 /** Archivo `public/vision/numbers.templates.json`, generado por `npm run dataset`. */
-export interface TemplateFile { version: 1; created: string; signers: number; templates: Template[] }
+export interface TemplateFile {
+  version: 1; created: string; signers: number; templates: Template[]
+  /** Datasets públicos usados, con su cita y licencia (obligatorio citarlos al publicar las plantillas). */
+  sources?: string[]
+}
 
 function sqDist(a: number[], b: number[]): number {
   let s = 0
