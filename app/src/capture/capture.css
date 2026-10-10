@@ -68,6 +68,16 @@
 .rec-live { position: absolute; top: 12px; left: 12px; display: flex; align-items: center; gap: 8px; background: rgba(0, 0, 0, 0.65); color: #fff; padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 15px; }
 .rec-live span { width: 12px; height: 12px; border-radius: 50%; background: #ff4d4d; animation: rec-blink 1s infinite; }
 @keyframes rec-blink { 50% { opacity: 0.3; } }
+.rec-live.ending { background: rgba(160, 100, 0, 0.9); }
+/* Barra del tiempo de grabación: se llena; en los últimos segundos se pone amarilla */
+.rec-timebar { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; background: rgba(0, 0, 0, 0.35); }
+.rec-timebar i { display: block; height: 100%; background: #ff4d4d; transition: width 0.2s linear; }
+.rec-timebar.ending i { background: #ffb020; }
+.rec-clock { font-size: 22px; font-weight: 800; color: #c62828; }
+.rec-clock.ending { color: #9a6300; }
+.rec-stopped { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 10px 14px; border-radius: 10px; background: #e7f4ec; color: #1e6b3a; font-weight: 800; font-size: 17px; }
+.rec-stopped.bad { background: #fff6db; color: #6b4e00; }
+@media (prefers-reduced-motion: reduce) { .rec-live span { animation: none; } .rec-timebar i { transition: none; } }
 .rec-replay canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .rec-replay-tag { position: absolute; bottom: 10px; left: 10px; background: rgba(0, 0, 0, 0.6); color: #fff; padding: 4px 10px; border-radius: 999px; font-size: 13px; }
 .rec-replay.vcam.mirrored .rec-replay-tag { transform: none; }

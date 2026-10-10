@@ -19,7 +19,14 @@ export interface SignTask {
    */
   mode: "seña" | "fija"
   durationMs?: number
+  /** Solo "seña": tope de la toma (por defecto 12 s). Es un seguro por si no se detecta que bajó la mano. */
+  maxMs?: number
+  /** Solo "seña": tiempo con la mano abajo para dar la seña por terminada (por defecto 0.5 s). */
+  restMs?: number
 }
+
+/** Trámites y "otra seña" son frases: más tiempo y tolerancia a pausas con la mano abajo. */
+const PHRASE = { maxMs: 20000, restMs: 1200 }
 
 const n = (value: number, reference: string): SignTask => ({
   id: `num-${value}`, label: String(value), title: `Número ${value}`, group: "Números", reference,
@@ -42,12 +49,12 @@ export const TASKS: SignTask[] = [
   { id: "no-cabeza", label: "no", title: "No (con la cabeza)", group: "Sí y no", reference: "Negar con la cabeza de lado a lado varias veces.", instruction: "Mire a la cámara y niegue con la cabeza.", takes: 5, mode: "fija", durationMs: 3000 },
   { id: "no-indice", label: "no", title: "No (con el índice)", group: "Sí y no", reference: "Dedo índice extendido que se mueve de lado a lado.", instruction: "Haga la seña de NO con el dedo índice.", takes: 5, mode: "seña" },
 
-  { id: "tramite-asignar", label: "asignar", title: "Pedir una cita", group: "Trámites", instruction: "Pida una cita médica como lo haría en la recepción.", takes: 5, mode: "seña" },
-  { id: "tramite-cancelar", label: "cancelar", title: "Cancelar una cita", group: "Trámites", instruction: "Diga que quiere cancelar su cita, como lo haría en la recepción.", takes: 5, mode: "seña" },
-  { id: "tramite-facturar", label: "facturar", title: "Pagar o facturar una cita", group: "Trámites", instruction: "Diga que quiere pagar o facturar su cita, como lo haría en la recepción.", takes: 5, mode: "seña" },
+  { id: "tramite-asignar", label: "asignar", title: "Pedir una cita", group: "Trámites", instruction: "Pida una cita médica como lo haría en la recepción.", takes: 5, mode: "seña", ...PHRASE },
+  { id: "tramite-cancelar", label: "cancelar", title: "Cancelar una cita", group: "Trámites", instruction: "Diga que quiere cancelar su cita, como lo haría en la recepción.", takes: 5, mode: "seña", ...PHRASE },
+  { id: "tramite-facturar", label: "facturar", title: "Pagar o facturar una cita", group: "Trámites", instruction: "Diga que quiere pagar o facturar su cita, como lo haría en la recepción.", takes: 5, mode: "seña", ...PHRASE },
 
   { id: "nada", label: "nada", title: "Sin hacer señas", group: "Sin seña", instruction: "Quédese natural frente a la cámara: mire alrededor, acomódese o rásquese, sin hacer señas.", takes: 3, mode: "fija", durationMs: 4000 },
-  { id: "otra", label: "otra", title: "Otra seña cualquiera", group: "Sin seña", instruction: "Haga cualquier seña que no esté en esta lista (por ejemplo, su nombre o un saludo).", takes: 3, mode: "seña" },
+  { id: "otra", label: "otra", title: "Otra seña cualquiera", group: "Sin seña", instruction: "Haga cualquier seña que no esté en esta lista (por ejemplo, su nombre o un saludo).", takes: 3, mode: "seña", ...PHRASE },
 ]
 
 export const taskById = (id: string) => TASKS.find((t) => t.id === id)
