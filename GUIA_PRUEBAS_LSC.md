@@ -195,16 +195,16 @@ En el panel:
 | Solicitud | **Activar cámara** |
 | Detección del trámite | El señante hace la seña de "pedir una cita", **o la seña del número 1**, o toca **1 Asignación de cita** en la tablet → esperar el resultado → **Confirmar: Asignación de cita**. Con el número, el panel dice *Seña del número 1 reconocida en la tablet* (llega al bajar la mano o ~1.5 s después) |
 | Documento | **Documento recibido** |
-| Especialidad | **Ejemplo** → **Enviar a la tablet** |
+| Especialidad | Nada: la tablet pregunta "¿Qué especialidad necesita?" y **muestra la lista de una vez** (la última que envió este panel o la de ejemplo), con la opción **9 · Otra**. Para cambiarla: **Editar opciones** |
 
 ### 2.3 Probar la seña
 
-En la tablet aparecen las especialidades numeradas. En la columna derecha hay un recuadro pequeño con la cámara que dice **"Haga la seña del número"**.
+En la tablet aparecen las especialidades numeradas (1–8) y la **9 · Otra · Mi especialidad no está aquí**. En la columna derecha hay un recuadro pequeño con la cámara que dice **"Haga la seña del número"**.
 
 | Prueba | Qué hacer en la tablet | Qué debería pasar |
 |---|---|---|
 | Seña clara | Levante la mano y haga el **3**, quieto 1 s | **Tablet:** la opción 3 queda marcada ✓ y el recuadro dice "Entendí este número". **Panel:** `Seña del número reconocida · NN %`, la barra de precisión y el botón **Confirmar opción 3** |
-| Número fuera de rango | Con 8 opciones, haga el **9** | No se marca nada (no existe la opción 9) |
+| Otra especialidad | Haga el **9** o toque **Otra** | **Panel:** `NO ESTÁ EN LA LISTA`, pide preguntar cuál es y usar **Editar opciones**; **Confirmar** queda deshabilitado |
 | Confianza baja | Una seña ambigua o a medio hacer | **Panel:** `VALIDACIÓN REQUERIDA · Posible seña del número N`, con botones **Usar opción N** y alternativas. La tablet **no** marca nada |
 | Recaptar | En el panel, **Volver a captar** | Se borra la selección y la tablet vuelve a esperar una seña |
 | El toque sigue funcionando | Toque una tarjeta | Se marca por toque: `Seleccionado en la pantalla táctil` |

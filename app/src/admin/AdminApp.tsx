@@ -3,10 +3,11 @@ import QRCode from "qrcode"
 import { IPS_NAME, SEDE } from "../shared/config"
 import { SYNC_MODE, newSessionCode, useAdminSync } from "../shared/sync"
 import { loadManifest, type VideoManifest } from "../shared/videos"
-import type { Gender } from "../shared/types"
+import type { Gender, MenuOption } from "../shared/types"
 import TabletScreen from "../tablet/TabletScreen"
 import StepControls from "./StepControls"
 import { buildTabletState, currentStep, stepsOf, useSession, type Session } from "./session"
+import { loadSpecialties, saveSpecialties } from "./specialties"
 import Icon from "../shared/Icon"
 import { ScaledPreview } from "./widgets"
 
@@ -32,7 +33,9 @@ export default function AdminApp() {
   const [manifest, setManifest] = useState<VideoManifest>({})
   // Código de la sesión de emparejamiento. Se conserva al recargar para que la tablet se reconecte sola.
   const [code, setCode] = useStored<string>("inlsc.session", "")
-  const { session, actions } = useSession()
+  // Al preguntar la especialidad, la tablet muestra de una vez la última lista enviada (o la de ejemplo).
+  const { session, actions: baseActions } = useSession({ defaultSpecialties: loadSpecialties })
+  const actions = { ...baseActions, sendSpecialties: (options: MenuOption[] | null) => { if (options) saveSpecialties(options); baseActions.sendSpecialties(options) } }
 
   useEffect(() => { loadManifest().then(setManifest) }, [])
   useEffect(() => { if (!code) setCode(newSessionCode()) }, [code]) // eslint-disable-line react-hooks/exhaustive-deps
