@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useState } from "react"
 import { MOCK_CITAS, formatDate, formatTime, specialtyByName } from "../shared/catalog"
 import { SEDE } from "../shared/config"
 import { INTRO, PATHS, type FlowPath, type Step } from "../shared/flows"
@@ -23,8 +23,8 @@ export interface Session {
   index: number
   /** Se incrementa para reiniciar el video en la tablet. */
   seq: number
-  /** `source`: de dónde salió el trámite detectado (seña reconocida en la tablet o botón de simulación). */
-  detect: { status: "waiting" | "analyzing" | "done"; intent: number; confidence: number; source?: "seña" | "simulación" }
+  /** `source`: de dónde salió el trámite detectado. La confianza solo aplica a la seña. */
+  detect: { status: "waiting" | "done"; intent: number; confidence: number; source?: "seña" | "táctil" }
   specialties: MenuOption[] | null
   citasSent: boolean
   slots: Slot[] | null
@@ -64,21 +64,16 @@ export function optionCount(s: Session): number {
   return 0
 }
 
-const random = (min: number, max: number) => Math.round(min + Math.random() * (max - min))
-
 export function useSession() {
   const [session, setSession] = useState<Session>(NEW_SESSION)
-  // Evita que un temporizador de una simulación anterior modifique un paso distinto.
-  const stepToken = useRef(0)
 
   const update = useCallback((fn: (s: Session) => Session) => setSession(fn), [])
 
-  const start = () => { stepToken.current++; setSession({ ...NEW_SESSION, active: true }) }
-  const cancel = () => { stepToken.current++; setSession(NEW_SESSION) }
+  const start = () => setSession({ ...NEW_SESSION, active: true })
+  const cancel = () => setSession(NEW_SESSION)
   const replay = () => update((s) => ({ ...s, seq: s.seq + 1 }))
 
   const advance = () => {
-    stepToken.current++
     update((s) => {
       const last = s.index >= stepsOf(s).length - 1
       if (last) return { ...s, active: false, finished: true }
@@ -86,32 +81,29 @@ export function useSession() {
     })
   }
 
-  // ── Detección simulada del trámite ──
-  const simulateDetection = (intent: number, low: boolean) => {
-    const token = ++stepToken.current
-    const confidence = low ? random(41, 58) : random(87, 96)
-    update((s) => ({ ...s, detect: { status: "analyzing", intent, confidence, source: "simulación" } }))
-    setTimeout(() => {
-      if (token !== stepToken.current) return
-      update((s) => ({ ...s, detect: { ...s.detect, status: "done" } }))
-    }, 1800)
-  }
+  // ── Detección del trámite: seña reconocida en la tablet, toque en la tablet o elección del funcionario ──
   /** Trámite reconocido en la tablet. Solo vale para el paso de detección en curso y si todavía no se detectó otro. */
   const detectBySign = (e: Extract<TabletEvent, { type: "sign" }>) => update((s) => {
     if (e.task !== "tramite" || e.seq !== s.seq || currentStep(s).kind !== "detect" || s.detect.status !== "waiting") return s
     if (!PATHS[e.value]) return s
-    stepToken.current++
     return { ...s, detect: { status: "done", intent: e.value, confidence: e.confidence, source: "seña" } }
   })
-  const retryDetection = () => { stepToken.current++; update((s) => ({ ...s, seq: s.seq + 1, detect: { status: "waiting", intent: 0, confidence: 0 } })) }
+  const retryDetection = () => { update((s) => ({ ...s, seq: s.seq + 1, detect: { status: "waiting", intent: 0, confidence: 0 } })) }
   const chooseIntent = (intent: number) => update((s) => ({ ...s, detect: { ...s.detect, intent } }))
   const confirmIntent = () => {
-    stepToken.current++
     update((s) => ({ ...s, path: PATHS[s.detect.intent], index: s.index + 1, seq: s.seq + 1, pick: null, pickBy: null, sign: null }))
   }
 
   // ── Selección en infografías: el señante toca la opción o hace la seña del número ──
-  const selectByTouch = (index: number) => update((s) => index < optionCount(s) ? { ...s, pick: index, pickBy: "táctil", sign: null } : s)
+  /**
+   * Toque en la tablet. `seq` es el del estado que mostraba la tablet: un toque atrasado de otra pantalla se descarta.
+   * En la detección, el toque elige el trámite (también corrige una seña ya reconocida).
+   */
+  const selectByTouch = (index: number, seq: number) => update((s) => {
+    if (seq !== s.seq) return s
+    if (currentStep(s).kind === "detect") return PATHS[index] ? { ...s, detect: { status: "done", intent: index, confidence: 100, source: "táctil" } } : s
+    return index < optionCount(s) ? { ...s, pick: index, pickBy: "táctil", sign: null } : s
+  })
 
   /**
    * Seña de número reconocida en la tablet. Se descarta si viene de otro paso (seq distinto) o fuera de rango.
@@ -145,7 +137,7 @@ export function useSession() {
     session,
     actions: {
       start, cancel, replay, advance,
-      simulateDetection, detectBySign, retryDetection, chooseIntent, confirmIntent,
+      detectBySign, retryDetection, chooseIntent, confirmIntent,
       selectByTouch, selectBySign, acceptSign, clearPick, confirmPick,
       sendSpecialties: (options: MenuOption[] | null) => update((s) => ({ ...s, specialties: options, pick: null, pickBy: null, sign: null, seq: s.seq + 1 })),
       sendCitas: (sent: boolean) => update((s) => ({ ...s, citasSent: sent, pick: null, pickBy: null, sign: null, seq: s.seq + 1 })),
@@ -161,9 +153,9 @@ export type SessionActions = ReturnType<typeof useSession>["actions"]
 /**
  * Traduce la sesión del funcionario a lo que debe mostrar la tablet.
  * `signNumbers`: en las infografías, además del toque, la tablet reconoce la seña del número de la opción.
- * `signIntent`: en la detección del trámite, la tablet reconoce la seña con la cámara (si no, el funcionario la simula).
+ * En la detección del trámite la tablet siempre reconoce la seña con la cámara, y el señante también puede tocar su opción.
  */
-export function buildTabletState(s: Session, gender: Gender, manifest: VideoManifest, signNumbers = false, signIntent = false): TabletState {
+export function buildTabletState(s: Session, gender: Gender, manifest: VideoManifest, signNumbers = false): TabletState {
   const video = (id: Parameters<typeof pickVideo>[0]) => pickVideo(id, gender, manifest)
 
   if (!s.active) {
@@ -190,7 +182,7 @@ export function buildTabletState(s: Session, gender: Gender, manifest: VideoMani
     case "detect":
       return {
         ...base, camera: true, video: video("solicitud"),
-        ...(signIntent && s.detect.status === "waiting" ? { recognize: { task: "tramite" } satisfies Recognize } : {}),
+        ...(s.detect.status === "waiting" ? { recognize: { task: "tramite" } satisfies Recognize } : {}),
         view: { kind: "detect", options: PATHS.map((p) => ({ icon: p.icon, text: p.name })), detected: s.detect.status === "done" && s.detect.confidence >= 70 ? s.detect.intent : null },
       }
 

@@ -1,4 +1,4 @@
-# InLSC: MVP simulado
+# InLSC: MVP
 
 Prototipo funcional de dos pantallas sincronizadas:
 
@@ -47,7 +47,7 @@ INLSC_HTTP=1 PORT=5175 VITE_SYNC=relay npm start   # abrir http://localhost:5175
 
 > ⚠️ Con GitHub gratuito, Pages exige que el repositorio sea **público**: los videos de los intérpretes y el nombre de la IPS (`src/shared/config.ts`) quedarán visibles en internet. Confirme que tiene el consentimiento de los intérpretes y autorización de la IPS antes de publicar.
 
-> ⚠️ **La detección del trámite es simulada.** El funcionario la dispara desde el panel (caja *Servicios básicos de salud* del paso de detección). La selección **táctil** en la tablet sí es real. En las infografías, por defecto el señante elige solo tocando (Ajustes1); la **seña del número** es real (beta), pero hay que activarla en el panel (ver *Reconocimiento de señas LSC* más abajo). El panel muestra siempre la etiqueta "MODO DEMO".
+> ⚠️ **El reconocimiento de señas está en prueba.** La tablet reconoce la seña del trámite con la cámara, pero está entrenada con una sola señante: el funcionario siempre confirma, y el señante también puede **tocar** su opción. En las infografías, por defecto el señante elige solo tocando (Ajustes1); la **seña del número** es real (beta), pero hay que activarla en el panel (ver *Reconocimiento de señas LSC* más abajo). El panel muestra siempre la etiqueta "Reconocimiento de señas en prueba".
 
 ## Requisitos
 
@@ -78,8 +78,8 @@ Para probar sin la tablet, abra la dirección de la tablet (con `&s=<código>`) 
 |---|---|---|
 | 1 | Elija el intérprete (*Mujer / Hombre*) y pulse *Iniciar atención* en la ventanita | Video de saludo |
 | 2 | *Continuar* | Video "¿Cuál es su solicitud?" |
-| 3 | *Activar cámara* | Cámara activa + los 3 trámites |
-| 4 | Espera el resultado (2–4 s) → *Confirmar* | Hace la seña de "pedir una cita"; la tablet la reconoce y se marca ✓ |
+| 3 | *Activar cámara* | Cámara activa + los 3 trámites (tocables) |
+| 4 | Espera el resultado (2–4 s) → *Confirmar* | Hace la seña de "pedir una cita" (o toca *Asignación de cita*); se marca ✓ |
 | 5 | *Documento recibido* | Video "entregue su documento" |
 | 6 | Especialidad: *Ejemplo* → *Enviar a la tablet* | Infografía de especialidades → **toca una opción** |
 | 7 | *Confirmar opción* → *Orden verificada* | Video "orden médica" |
@@ -87,8 +87,8 @@ Para probar sin la tablet, abra la dirección de la tablet (con `&s=<código>`) 
 | 9 | *Finalizar atención* | "¡Cita asignada!" + "Que tenga un buen día" |
 
 **Variantes para mostrar:**
-- **Sin cámara:** en el paso 4, *Simular sin cámara* → *Simular reconocimiento* (o *Simular confianza baja* para mostrar la validación del funcionario y *Volver a captar seña*). También se puede apagar en las preferencias: *Detección del trámite → Simulada*.
-- **Si la seña no se reconoce:** el funcionario elige el trámite con los botones que aparecen debajo, o pide repetir con *Volver a captar seña*.
+- **Por toque:** en el paso 4 el señante toca su trámite debajo de la cámara, en lugar de hacer la seña (o para corregirla).
+- **Si la seña no se reconoce:** el funcionario elige el trámite con los botones del panel, o pide repetir con *Volver a captar seña*. Con confianza < 70 % el panel pide validar.
 - **Sin disponibilidad:** en el paso 8 use *Sin disponibilidad*: la tablet reproduce el video de negación con el aviso «No hay disponibilidad. Intente otro día.» y el panel ofrece *Finalizar atención*.
 - **Celular:** abra la dirección de la tablet en un celular, en vertical u horizontal.
 - **Otros trámites:** cancelación (lista de citas simuladas) y facturación (campo de valor en $).
@@ -99,8 +99,8 @@ Para probar sin la tablet, abra la dirección de la tablet (con `&s=<código>`) 
 |---|---|
 | Sincronización PC ↔ tablet por sesiones (SSE local o relé MQTT) | Reconocimiento de señas: **en prueba**, entrenado con 1 señante (S-9BST) y datos simulados a partir de sus tomas |
 | Videos LSC reales y elección hombre/mujer según el perfil (se elige en el panel antes de iniciar) | Citas del paciente (`MOCK_CITAS`) |
-| Selección táctil en la tablet | Integración con el sistema de agendamiento de la IPS |
-| Cámara de la tablet (vista previa, solo al detectar la seña) | Registro de información por una semana |
+| Selección táctil en la tablet (también del trámite) | Integración con el sistema de agendamiento de la IPS |
+| Cámara de la tablet con reconocimiento del trámite (solo en ese paso) | Registro de información por una semana |
 | Catálogo real de especialidades y servicios | Videos faltantes: despedida INT09, hombre en facturación, valor con intérprete |
 
 ## Estructura
@@ -121,7 +121,7 @@ Los trámites se definen como datos en `src/shared/flows.ts`, y el nombre de la 
 
 Ver `../plan_reconocimiento_LSC.md`. Todo corre en el navegador de la tablet con MediaPipe 0.10.35, sin internet. El video nunca sale de la tablet.
 
-- **Detección del trámite (asignar, cancelar, facturar):** preferencia *Detección del trámite → Con la cámara* (encendida por defecto). La tablet compara la seña con prototipos (`src/vision/signs.ts`, DTW + k vecinos) y envía el trámite con su confianza; el funcionario confirma. Clases de rechazo "nada" y "otra": si la seña no se parece a ninguna, no se emite nada y el funcionario elige el trámite a mano.
+- **Detección del trámite (asignar, cancelar, facturar):** siempre activa en ese paso. La tablet compara la seña con prototipos (`src/vision/signs.ts`, DTW + k vecinos) y envía el trámite con su confianza; el funcionario confirma. Clases de rechazo "nada" y "otra": si la seña no se parece a ninguna, no se emite nada: el señante toca su opción o el funcionario elige el trámite.
 - **Seña del número en las infografías:** en el panel, preferencia *Selección en las infografías → Toque o seña del número* (apagada por defecto). La tablet reconoce 1–9 y el funcionario confirma; con confianza < 70 % solo se sugiere.
 - **`/?captura`:** página para que señantes graben y validen señas (consentimiento, perfil anónimo, grabación guiada, prueba del reconocedor). El paquete (solo puntos, sin video) se envía por correo a `CAPTURE_EMAIL` (`src/shared/config.ts`): automático con el servicio `../captura-mail` (Cloudflare Worker, `VITE_CAPTURE_URL`), o por el menú Compartir si no está disponible. El consentimiento es un **borrador** (`src/capture/consent.ts`) pendiente de revisión legal.
 - **`/?lab`:** diagnóstico en la tablet real: fps, GPU/CPU, extensión de los dedos y resultados en vivo. `?lab&src=videos/seleccion_m.mp4` analiza un video publicado.
