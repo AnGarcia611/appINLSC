@@ -129,3 +129,19 @@ test("cabeza: asentir = sí, negar = no, quieto = nada", () => {
   assert.equal(detect(headFrames("x", 0.025))?.value, "no")
   assert.equal(detect(headFrames("x", 0.002)), null)
 })
+
+test("tras un 6–9, dejar la mano quieta arriba no emite el 1–4 de la misma forma", () => {
+  const shape = SHAPES[1]
+  const bent = shape.map((v, i) => (i > 0 && v === 0 ? 0.85 : v)) as Curl
+  const seq: Point[][] = []
+  for (let i = 0; i < 4; i++) seq.push(hand(mix(SHAPES[0], shape, i / 3)))
+  for (let c = 0; c < 3; c++) for (let i = 0; i < 10; i++) seq.push(hand(mix(shape, bent, Math.sin((i / 10) * Math.PI))))
+  for (let i = 0; i < 90; i++) seq.push(hand(shape)) // 4.5 s quieta: los ciclos salen de la ventana de 3 s
+  const out = run(sequence(seq.length, (i) => seq[i]))
+  assert.deepEqual(out.map((r) => r.value), [6], JSON.stringify(out))
+})
+
+test("un número fuera de rango sostenido se emite una sola vez (con su alternativa válida)", () => {
+  const out = run(sequence(80, () => hand(SHAPES[5])), 4)
+  assert.ok(out.length <= 1, `se emitió ${out.length} veces: ${JSON.stringify(out.map((r) => r.value))}`)
+})

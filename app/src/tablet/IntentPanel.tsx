@@ -12,7 +12,8 @@ interface Props {
   /** Del estado actual: al cambiar (p. ej. "Volver a captar seña") se reinicia el reconocimiento. */
   seq: number
   /** `value` = índice del trámite en PATHS. */
-  onSign: (result: SignGuess & { alternatives: SignGuess[] }) => void
+  /** `seq`: el del estado con el que se creó el reconocedor (no el actual): un resultado de otro paso se descarta en el panel. */
+  onSign: (result: SignGuess & { alternatives: SignGuess[] }, seq: number) => void
 }
 
 /**
@@ -21,6 +22,7 @@ interface Props {
  */
 export default function IntentPanel({ stream, seq, onSign }: Props) {
   const recognizer = useRef<SignRecognizer | null>(null)
+  const recognizerSeq = useRef(seq)
   const [status, setStatus] = useState<VisionStatus>({ state: "cargando" })
   const [phase, setPhase] = useState<SignPhase>("reposo")
   const [missing, setMissing] = useState(false)
@@ -36,7 +38,7 @@ export default function IntentPanel({ stream, seq, onSign }: Props) {
     loadSignTemplates().then((templates) => {
       if (!alive) return
       setMissing(!templates)
-      if (templates) recognizer.current = new SignRecognizer({ accept: INTENT_LABELS, templates, aspect })
+      if (templates) { recognizer.current = new SignRecognizer({ accept: INTENT_LABELS, templates, aspect }); recognizerSeq.current = seq }
     })
     return () => { alive = false }
   }, [seq, stream])
@@ -52,7 +54,7 @@ export default function IntentPanel({ stream, seq, onSign }: Props) {
     send.current({
       value: index, confidence: result.confidence,
       alternatives: result.alternatives.map((a) => ({ value: INTENT_LABELS.indexOf(a.value), confidence: a.confidence })).filter((a) => a.value >= 0),
-    })
+    }, recognizerSeq.current)
   }
 
   const text = status.state === "error" || missing

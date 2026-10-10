@@ -143,7 +143,12 @@ export class NumberRecognizer {
   private readonly templates: Template[]
   private readonly segmenter = new Segmenter()
   private buffer: Sample[] = []
-  private emitted: { value: number; kind: NumberResult["kind"] } | null = null
+  /**
+   * Lo último emitido en esta seña: la forma base (1–5) y el tipo, ANTES de limitar a 1..max.
+   * Comparar contra el valor final fallaba: tras un 6 (base 1) el 1 quieto se emitía encima, y un número
+   * fuera de rango (cambiado por su alternativa) se reemitía en cada fotograma.
+   */
+  private emitted: { base: number; kind: NumberResult["kind"] } | null = null
 
   constructor(opts: RecognizerOptions = {}) {
     this.max = opts.max ?? 9
@@ -178,8 +183,9 @@ export class NumberRecognizer {
     const cycles = flexCycles(this.buffer, dom.base)
 
     // Movimiento: 2 ciclos bastan para decidir sin esperar a que baje la mano.
-    if (cycles >= 2 && dom.base <= 4 && this.emitted?.kind !== "movimiento") {
-      return this.emit(this.dynamicResult(dom, cycles))
+    // (Otro número con movimiento sin bajar la mano: vale si cambió la forma, p. ej. 6 → 7.)
+    if (cycles >= 2 && dom.base <= 4 && !(this.emitted?.kind === "movimiento" && this.emitted.base === dom.base)) {
+      return this.emit(this.dynamicResult(dom, cycles), dom.base, "movimiento")
     }
 
     // Estático: misma forma clara y quieta durante holdMs, sin flexión en la ventana.
@@ -192,14 +198,15 @@ export class NumberRecognizer {
     const wags = recent.map((x) => x.wag)
     if (Math.max(...wags) - Math.min(...wags) > WAG_STILL) return null
     const base = recent[0].best
-    if (this.emitted && this.emitted.value === base) return null
+    // Misma forma que lo ya emitido (también tras un 6–9 de esa base: la mano quieta al final no es un 1–4).
+    if (this.emitted && this.emitted.base === base) return null
     if (this.emitted) this.buffer = recent // cambió de forma sin bajar la mano: empieza otra seña
-    return this.emit(this.staticResult(base, recent))
+    return this.emit(this.staticResult(base, recent), base, "estático")
   }
 
-  private emit(r: NumberResult | null): NumberResult | null {
+  private emit(r: NumberResult | null, base: number, kind: NumberResult["kind"]): NumberResult | null {
     if (!r) return null
-    this.emitted = { value: r.value, kind: r.kind }
+    this.emitted = { base, kind }
     this.phase = "reconocido"
     return r
   }
@@ -218,10 +225,10 @@ export class NumberRecognizer {
 
   /** Al bajar la mano tras emitir un estático: si hubo 1 ciclo de flexión de esa base, corrige a 6–9. */
   private upgradeAtEnd(): NumberResult | null {
-    if (this.emitted?.kind !== "estático" || this.emitted.value > 4) return null
-    const cycles = flexCycles(this.buffer, this.emitted.value)
+    if (this.emitted?.kind !== "estático" || this.emitted.base > 4) return null
+    const cycles = flexCycles(this.buffer, this.emitted.base)
     const dom = dominantBase(this.buffer)
-    if (cycles < 1 || !dom || dom.base !== this.emitted.value) return null
+    if (cycles < 1 || !dom || dom.base !== this.emitted.base) return null
     return this.dynamicResult(dom, cycles)
   }
 
