@@ -141,6 +141,8 @@ npm run evaluar -- ~/inlsc-datos ~/inlsc-publicos/lsc54 --publicos-solo-medir   
 python3 -m venv ~/inlsc-publicos/.venv && ~/inlsc-publicos/.venv/bin/pip install mediapipe opencv-python-headless
 # Videos Numbers.zip (190 MB) de https://doi.org/10.57760/sciencedb.25639, descomprimido en ~/inlsc-publicos/lsc54-videos
 ~/inlsc-publicos/.venv/bin/python scripts/importar_lsc54.py ~/inlsc-publicos/lsc54-videos ~/inlsc-publicos/lsc54
+# Cualquier otro video (archivos de un canal, videos del proyecto): lista CSV con archivo, etiqueta, señante, tramo y fuente
+~/inlsc-publicos/.venv/bin/python scripts/importar_videos.py lista.csv ~/inlsc-publicos/otra-fuente
 ```
 
 > ⚠️ Guarde los paquetes recibidos **fuera de este repositorio** (es público). Los scripts se niegan a leer o escribir carpetas dentro del repo.
