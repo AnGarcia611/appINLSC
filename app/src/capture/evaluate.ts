@@ -107,7 +107,7 @@ export function evaluate(packages: CapturePackage[], opts: EvalOptions): Outcome
     for (const pkg of real.filter((p) => p.consent.evaluation)) {
       for (const take of pkg.takes.filter((t) => !train(t))) { record(take, "real", aspectOf(pkg)); n++ }
     }
-    for (const sim of simulate(real.filter((p) => p.consent.evaluation), { personas: opts.testPersonas, seed: opts.seed + 5000 + f, filter: (t) => !train(t) })) {
+    for (const sim of simulate(real, { personas: opts.testPersonas, seed: opts.seed + 5000 + f, filter: (t) => !train(t), purpose: "evaluation" })) {
       for (const take of sim.takes) record(take, "simulada", aspectOf(sim))
     }
     opts.log?.(`grupo ${f + 1}/${opts.folds}: ${n} tomas reales de prueba · ${models.numbers.templates.length} formas · ${models.signs.prototypes.length} prototipos · near ${models.signs.near} far ${models.signs.far} · ${((Date.now() - t0) / 1000).toFixed(0)} s`)

@@ -219,6 +219,18 @@ const quantile = (xs: number[], q: number) => { const s = [...xs].sort((a, b) =>
  * `calibration`: ventanas que no se usaron para elegir prototipos (otras personas simuladas); con ellas se mide
  * qué distancia tiene una seña conocida a su prototipo más cercano (near = percentil 75, far = el mayor entre percentil 99 × 1.5 y near × 3).
  */
+/**
+ * Problemas que impiden usar un archivo de prototipos (vacío = utilizable): faltan trámites o los umbrales
+ * no tienen sentido (sin tomas de calibración quedan en 0 y el reconocedor nunca emitiría).
+ */
+export function signTemplateProblems(file: SeqTemplateFile, required: string[]): string[] {
+  const problems: string[] = []
+  const missing = required.filter((l) => !file.prototypes.some((p) => p.label === l))
+  if (missing.length) problems.push(`sin tomas utilizables de: ${missing.join(", ")}`)
+  if (!(file.near > 0 && Number.isFinite(file.far) && file.far > file.near)) problems.push(`umbrales inválidos (near ${file.near}, far ${file.far})`)
+  return problems
+}
+
 export function buildSignTemplates(pool: WindowPool, calibration: WindowPool, now = new Date(), seed = 1): SeqTemplateFile {
   const r = rng(seed)
   const prototypes: SeqPrototype[] = []
@@ -230,7 +242,8 @@ export function buildSignTemplates(pool: WindowPool, calibration: WindowPool, no
   for (const [label, { list }] of calibration.byLabel) {
     if (label === "nada" || label === "otra") continue
     const mine = prototypes.filter((p) => p.label === label)
-    for (const w of list.slice(0, 120)) own.push(Math.min(...mine.map((p) => dtw(w, p.s))))
+    if (!mine.length) continue
+    for (const w of list.slice(0, 120)) { const d = Math.min(...mine.map((p) => dtw(w, p.s))); if (Number.isFinite(d)) own.push(d) }
   }
   // Las tomas reales quedan más lejos de los prototipos que las simuladas de calibración: márgenes amplios.
   const near = Math.round(quantile(own, 0.75) * 1000) / 1000
